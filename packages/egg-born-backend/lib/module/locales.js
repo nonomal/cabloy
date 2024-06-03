@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const extend = require('extend2');
+const extend = require('@zhennann/extend');
 const localeutil = require('egg-born-localeutil').default;
 
 module.exports = function (loader, modules) {
@@ -28,6 +28,20 @@ module.exports = function (loader, modules) {
           return getText(locale || defaultLocale, ...args);
         };
       }
+
+      const __getLocale = context.__getLocale;
+      context.__getLocale = function () {
+        if (context.__locale) {
+          return context.__locale;
+        }
+        let locale = __getLocale.call(context);
+        const locale2 = context.bean.util.parseTokenSafe(locale);
+        if (locale !== locale2) {
+          locale = locale2;
+          context.__setLocale(locale);
+        }
+        return locale;
+      };
 
       return context;
     };

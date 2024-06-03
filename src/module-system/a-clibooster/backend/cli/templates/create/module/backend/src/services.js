@@ -1,4 +1,2 @@
-module.exports = app => {
-  const services = {};
-  return services;
-};
+const services = {};
+module.exports = services;

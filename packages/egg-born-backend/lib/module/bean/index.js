@@ -1,13 +1,16 @@
 const beanContainerFn = require('./beanContainer.js');
 
-module.exports = function (loader) {
+function loadBeanContainer(loader) {
+  loader.app.bean = beanContainerFn(loader.app, null);
+}
+
+function loadBeans(loader) {
   // use modulesArray
   const ebModulesArray = loader.app.meta.modulesArray;
 
   // all
   loader.app.meta.aops = {};
   loader.app.meta.beans = {};
-  loader.app.bean = beanContainerFn(loader.app, null);
 
   // load beans
   loadBeans();
@@ -37,7 +40,12 @@ module.exports = function (loader) {
       const beans = module.main.beans;
       if (!beans) continue;
       for (const beanName in beans) {
-        loader.app.bean._register(module.info.relativeName, beanName, beans[beanName]);
+        const moduleName = module.info.relativeName;
+        const beanClass = beans[beanName];
+        if (['app', 'ctx'].includes(beanClass.mode)) {
+          throw new Error(`bean: ${moduleName}:${beanName}, mode: ${beanClass.mode} is deprecated, use Class instead.`);
+        }
+        loader.app.bean._register(moduleName, beanName, beanClass);
       }
     }
   }
@@ -52,4 +60,9 @@ module.exports = function (loader) {
       }
     }
   }
+}
+
+module.exports = {
+  loadBeanContainer,
+  loadBeans,
 };

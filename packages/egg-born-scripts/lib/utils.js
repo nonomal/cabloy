@@ -11,7 +11,7 @@ const utils = {
   async versionCheck({ moduleName, moduleVersion, scene, mode }) {
     try {
       const httpClient = urllib.create();
-      const url = 'https://admin.cabloy.com/api/cabloy/store/util/version';
+      const url = 'https://portal.cabloy.com/api/cabloy/store/util/version';
       const options = {
         method: 'POST',
         data: {
@@ -62,7 +62,7 @@ const utils = {
         )} → ${chalk.keyword('orange')(moduleVersionCurrent)}`;
         if (mode === 'lerna') {
           message += `\nRun ${chalk.keyword('orange')('> git pull <')} to update cabloy!`;
-          message += `\nRun ${chalk.keyword('orange')('> lerna bootstrap <')} to install dependencies!`;
+          message += `\nRun ${chalk.keyword('orange')('> npm install <')} to install dependencies!`;
         } else {
           // message += `\nRun ${chalk.keyword('orange')('> npm update <')} to update cabloy!`;
           // message += `\nRun ${chalk.keyword('orange')('> npm run update:test <')} to update the test modules!`;

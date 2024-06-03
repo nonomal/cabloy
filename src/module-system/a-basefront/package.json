@@ -1,6 +1,6 @@
 {
   "name": "egg-born-module-a-basefront",
-  "version": "4.5.12",
+  "version": "5.0.0",
   "title": "Base Front",
   "eggBornModule": {
     "dependencies": {}
@@ -12,5 +12,6 @@
     "build:all": "npm run build:front && npm run build:backend",
     "preversion": "npm run build:all && git add ."
   },
-  "author": "zhennann"
+  "author": "zhennann",
+  "dependencies": {}
 }

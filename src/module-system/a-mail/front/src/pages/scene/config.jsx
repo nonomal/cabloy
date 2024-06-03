@@ -35,7 +35,7 @@ export default {
   },
   methods: {
     async init() {
-      await this._prepareScheme();
+      await this._prepareSchema();
       this._prepareData();
     },
     onFormSubmit() {
@@ -54,9 +54,10 @@ export default {
       this.$f7router.back();
       return true; // toast on success
     },
-    async _prepareScheme() {
+    async _prepareSchema() {
       // schema
-      const schema = await this.$api.post('/a/validation/validation/schema', {
+      const useStoreSchemas = await this.$store.use('a/validation/schemas');
+      const schema = await useStoreSchemas.getSchema({
         module: 'a-mail',
         validator: 'mailScene',
         schema: null,

@@ -4,7 +4,6 @@ const uuid = require('uuid');
 module.exports = function (app) {
   class QueueClient {
     constructor() {
-      this._scheduler = {};
       this._workers = {};
       this._queues = {};
       this._queueCallbacks = {};
@@ -80,9 +79,11 @@ module.exports = function (app) {
 
       _worker.worker.on('error', err => {
         if (err.message && err.message.indexOf('Missing lock for job') > -1) {
-          _worker.worker.run().catch(error => {
-            console.error(error);
-          });
+          if (!_worker.worker.running) {
+            _worker.worker.run().catch(error => {
+              console.error(error);
+            });
+          }
         }
       });
 
@@ -97,7 +98,7 @@ module.exports = function (app) {
       const prefix = `bull_${app.name}:queue`;
       // queue config
       const queueConfig = app.meta.queues[`${info.module}:${info.queueName}`].config;
-      // queueConfig.options: scheduler/queue/worker/job/limiter
+      // queueConfig.options: queue/worker/job/limiter
       const queueOptions = (queueConfig.options && queueConfig.options.queue) || null;
 
       // create queue
@@ -119,35 +120,7 @@ module.exports = function (app) {
       return _queue;
     }
 
-    _createScheduler(info, queueKey) {
-      // prefix
-      const prefix = `bull_${app.name}:queue`;
-      // queue config
-      const queueConfig = app.meta.queues[`${info.module}:${info.queueName}`].config;
-      // queueConfig.options: scheduler/queue/worker/job/limiter
-      const schedulerOptions = (queueConfig.options && queueConfig.options.scheduler) || null;
-
-      // create queue
-      const connectionScheduler = app.redis.get('queue'); // need not duplicate
-      const _schedulerOptions = Object.assign({}, app.config.queue.scheduler, schedulerOptions, {
-        prefix,
-        connection: connectionScheduler,
-      });
-      return new bull.QueueScheduler(queueKey, _schedulerOptions);
-    }
-
-    _ensureScheduler(info) {
-      // queueKey
-      const queueKey = this._combineQueueKey(info);
-      // scheduler
-      if (!this._scheduler[queueKey]) {
-        this._scheduler[queueKey] = this._createScheduler(info, queueKey);
-      }
-    }
-
     _ensureWorker(info) {
-      // scheduler
-      this._ensureScheduler(info);
       // queueKey
       const queueKey = this._combineQueueKey(info);
       // worker

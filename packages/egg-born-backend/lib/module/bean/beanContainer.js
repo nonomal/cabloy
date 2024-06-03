@@ -1,4 +1,5 @@
 const is = require('is-type-of');
+const ProxyMagic = require('./proxyMagic.js');
 
 module.exports = (app, ctx) => {
   const beanContainer = {
@@ -6,20 +7,12 @@ module.exports = (app, ctx) => {
       const beanFullName = beanClass.global
         ? beanName
         : `${typeof moduleName === 'string' ? moduleName : moduleName.relativeName}.${beanName}`;
-      let bean = beanClass.bean;
-      if (beanClass.mode === 'app' && is.function(bean) && !is.class(bean)) {
-        bean = bean(app);
-      }
-      app.meta.beans[beanFullName] = {
-        ...beanClass,
-        bean,
-      };
+      app.meta.beans[beanFullName] = beanClass;
       return beanFullName;
     },
     _registerAop(moduleName, aopName, aopClass) {
       const beanName = `aop.${aopName}`;
       const beanClass = {
-        mode: aopClass.mode,
         bean: aopClass.bean,
         aop: true,
       };
@@ -28,6 +21,8 @@ module.exports = (app, ctx) => {
       return beanFullName;
     },
     _getBeanClass(beanFullName) {
+      if (is.class(beanFullName)) return beanFullName;
+      // need not support object mode
       return app.meta.beans[beanFullName];
     },
     _getBean(moduleName, beanName) {
@@ -47,42 +42,41 @@ module.exports = (app, ctx) => {
       return this[beanFullName];
     },
     _newBean(beanFullName, ...args) {
+      // class
+      if (is.class(beanFullName)) {
+        const beanInstance = new beanFullName(...args);
+        return this._patchBeanInstance(beanInstance, args, beanFullName, false);
+      }
+      // string
       const _beanClass = this._getBeanClass(beanFullName);
       if (!_beanClass) {
         // throw new Error(`bean not found: ${beanFullName}`);
         return null;
       }
-      // class or fn
-      const bean = _beanClass.bean;
-      let _classOrFn;
-      if (_beanClass.mode === 'app') {
-        _classOrFn = bean;
-      } else if (_beanClass.mode === 'ctx') {
-        if (is.function(bean) && !is.class(bean)) {
-          _classOrFn = bean(ctx);
-        } else {
-          _classOrFn = bean;
-        }
-      }
       // instance
-      let beanInstance;
-      if (is.function(_classOrFn) && !is.class(_classOrFn)) {
-        if (_beanClass.mode === 'app') {
-          beanInstance = _classOrFn(ctx, ...args);
-        } else if (_beanClass.mode === 'ctx') {
-          beanInstance = _classOrFn(...args);
-        }
-      } else if (is.class(_classOrFn)) {
-        if (_beanClass.mode === 'app') {
-          beanInstance = new _classOrFn(ctx, ...args);
-        } else if (_beanClass.mode === 'ctx') {
-          beanInstance = new _classOrFn(...args);
-        }
+      const beanInstance = new _beanClass.bean(...args);
+      // patch
+      return this._patchBeanInstance(beanInstance, args, beanFullName, _beanClass.aop);
+    },
+    _patchBeanInstance(beanInstance, args, beanFullName, isAop) {
+      if (app) {
+        __setPropertyValue(beanInstance, 'app', app);
       }
-      // log
-      beanInstance.__beanFullName = beanFullName;
+      if (ctx) {
+        __setPropertyValue(beanInstance, 'ctx', ctx);
+      }
+      if (beanInstance.__init__) {
+        beanInstance.__init__(...args);
+      }
+      // __beanFullName__
+      if (!is.class(beanFullName)) {
+        __setPropertyValue(beanInstance, '__beanFullName__', beanFullName);
+      }
+      // not aop on aop
+      if (isAop) return beanInstance;
+      // aop chains
+      const _aopChains = this._prepareAopChains(beanFullName, beanInstance);
       // no aop
-      const _aopChains = this._getAopChains(beanFullName);
       if (_aopChains.length === 0) return beanInstance;
       // aop
       return this._newBeanProxy(beanFullName, beanInstance);
@@ -91,27 +85,33 @@ module.exports = (app, ctx) => {
       const self = this;
       return new Proxy(beanInstance, {
         get(target, prop, receiver) {
-          const descriptor = __getPropertyDescriptor(target, prop);
+          if (typeof prop === 'symbol') {
+            return target[prop];
+          }
+          const descriptorInfo = __getPropertyDescriptor(target, prop);
+          if (descriptorInfo && descriptorInfo.dynamic) return target[prop];
+          const methodType = __methodTypeOfDescriptor(descriptorInfo);
           // get prop
-          if (!descriptor || descriptor.get) {
-            if (typeof prop === 'symbol') {
-              return target[prop];
-            }
-            const methodName = descriptor ? `get__${prop}` : 'get__magic__';
-            const _aopChainsProp = self._getAopChainsProp(beanFullName, target, methodName);
+          if (!methodType) {
+            const methodName = `__get_${prop}__`;
+            const methodNameMagic = '__get__';
+            const _aopChainsProp = self._getAopChainsProp(beanFullName, methodName, methodNameMagic);
             if (_aopChainsProp.length === 0) return target[prop];
             // context
             const context = {
               target,
               receiver,
               prop,
-              method: methodName,
               value: undefined,
             };
             // aop
             __composeForProp(_aopChainsProp)(context, (context, next) => {
               if (context.value === undefined) {
-                context.value = target[prop];
+                if (!descriptorInfo && target.__get__) {
+                  context.value = target.__get__(prop);
+                } else {
+                  context.value = target[prop];
+                }
               }
               next();
             });
@@ -119,7 +119,6 @@ module.exports = (app, ctx) => {
             return context.value;
           }
           // method
-          const methodType = descriptor.value && descriptor.value.constructor && descriptor.value.constructor.name;
           return self._getInstanceMethodProxy(beanFullName, target, prop, methodType);
         },
         set(target, prop, value, receiver) {
@@ -127,8 +126,14 @@ module.exports = (app, ctx) => {
             target[prop] = value;
             return true;
           }
-          const methodName = `set__${prop}`;
-          const _aopChainsProp = self._getAopChainsProp(beanFullName, target, methodName);
+          const descriptorInfo = __getPropertyDescriptor(target, prop);
+          if (descriptorInfo && descriptorInfo.dynamic) {
+            target[prop] = value;
+            return true;
+          }
+          const methodName = `__set_${prop}__`;
+          const methodNameMagic = '__set__';
+          const _aopChainsProp = self._getAopChainsProp(beanFullName, methodName, methodNameMagic);
           if (_aopChainsProp.length === 0) {
             target[prop] = value;
             return true;
@@ -138,12 +143,15 @@ module.exports = (app, ctx) => {
             target,
             receiver,
             prop,
-            method: methodName,
             value,
           };
           // aop
           __composeForProp(_aopChainsProp)(context, (context, next) => {
-            target[prop] = context.value;
+            if (!descriptorInfo && target.__set__) {
+              target.__set__(prop, context.value);
+            } else {
+              target[prop] = context.value;
+            }
             next();
           });
           // ok
@@ -152,12 +160,17 @@ module.exports = (app, ctx) => {
       });
     },
     _getInstanceMethodProxy(beanFullName, beanInstance, prop, methodType) {
-      const _aopChainsProp = this._getAopChainsProp(beanFullName, beanInstance, prop);
+      // not aop magic methods
+      if (['__get__', '__set__'].includes(prop)) {
+        return beanInstance[prop];
+      }
+      // aop chains
+      const _aopChainsProp = this._getAopChainsProp(beanFullName, prop);
       if (_aopChainsProp.length === 0) return beanInstance[prop];
       // proxy
-      const methodProxyKey = `_aopproxy_method_${prop}`;
+      const methodProxyKey = `__aopproxy_method_${prop}__`;
       if (beanInstance[methodProxyKey]) return beanInstance[methodProxyKey];
-      beanInstance[methodProxyKey] = new Proxy(beanInstance[prop], {
+      const methodProxy = new Proxy(beanInstance[prop], {
         apply(target, thisArg, args) {
           // context
           const context = {
@@ -196,47 +209,71 @@ module.exports = (app, ctx) => {
           }
         },
       });
-      return beanInstance[methodProxyKey];
+      __setPropertyValue(beanInstance, methodProxyKey, methodProxy);
+      return methodProxy;
     },
-    _getAopChains(beanFullName) {
+    _prepareAopChains(beanFullName, beanInstance) {
+      // beanFullName maybe class
       const _beanClass = this._getBeanClass(beanFullName);
-      if (_beanClass._aopChains) return _beanClass._aopChains;
+      if (_beanClass.__aopChains__) return _beanClass.__aopChains__;
+      // chains
       const chains = [];
-      for (const key in app.meta.aops) {
-        const aop = app.meta.aops[key];
-        // not self
-        if (key === beanFullName) continue;
-        // check if match aop
-        if (_beanClass.aop && !aop.matchAop) continue;
-        // match
-        if (__aopMatch(aop.match, beanFullName)) {
-          chains.push(key);
+      if (!is.class(beanFullName)) {
+        for (const key in app.meta.aops) {
+          const aop = app.meta.aops[key];
+          // not self
+          if (key === beanFullName) continue;
+          // check if match aop
+          if (_beanClass.aop && !aop.matchAop) continue;
+          // match
+          if (__aopMatch(aop.match, beanFullName)) {
+            chains.push(key);
+          }
         }
       }
-      _beanClass._aopChains = chains;
+      // magic self
+      if (__hasMagicMothod(beanInstance)) {
+        chains.push(ProxyMagic);
+      }
+      // hold
+      __setPropertyValue(_beanClass, '__aopChains__', chains);
       return chains;
     },
-    _getAopChainsProp(beanFullName, beanInstance, methodName) {
-      const chainsKey = `_aopChains_${methodName}`;
+    _getAopChains(beanFullName) {
+      // beanFullName maybe class
+      const _beanClass = this._getBeanClass(beanFullName);
+      return _beanClass.__aopChains__;
+    },
+    _getAopChainsProp(beanFullName, methodName, methodNameMagic) {
+      const chainsKey = `__aopChains_${methodName}__`;
       const _beanClass = this._getBeanClass(beanFullName);
       if (_beanClass[chainsKey]) return _beanClass[chainsKey];
       const _aopChains = this._getAopChains(beanFullName);
       const chains = [];
       for (const key of _aopChains) {
-        const aop = this._getBean(key);
-        if (aop[methodName]) {
-          chains.push(key);
+        if (key === ProxyMagic) {
+          chains.push(ProxyMagic);
+        } else {
+          const aop = this._getBean(key);
+          if (aop[methodName]) {
+            chains.push([key, methodName]);
+          } else if (methodNameMagic && aop[methodNameMagic]) {
+            chains.push([key, methodNameMagic]);
+          }
         }
       }
-      _beanClass[chainsKey] = chains;
+      __setPropertyValue(_beanClass, chainsKey, chains);
       return chains;
     },
   };
 
   const __composeForPropAdapter = (context, chain) => {
-    const aop = beanContainer._getBean(chain);
+    // ProxyMagic
+    if (chain === ProxyMagic) return null;
+    // chain
+    const [key, methodName] = chain;
+    const aop = beanContainer._getBean(key);
     if (!aop) throw new Error(`aop not found: ${chain}`);
-    const methodName = context.method || context.prop;
     if (!aop[methodName]) return null;
     return {
       receiver: aop,
@@ -261,10 +298,18 @@ module.exports = (app, ctx) => {
 };
 
 function __getPropertyDescriptor(obj, prop) {
+  // dynamic
+  const descriptor = Object.getOwnPropertyDescriptor(obj, prop);
+  if (descriptor) return { descriptor, dynamic: true };
+  // static
+  return __getPropertyDescriptorStatic(obj, prop);
+}
+
+function __getPropertyDescriptorStatic(obj, prop) {
   let proto = Object.getPrototypeOf(obj);
   while (proto) {
     const descriptor = Object.getOwnPropertyDescriptor(proto, prop);
-    if (descriptor) return descriptor;
+    if (descriptor) return { descriptor, dynamic: false };
     proto = Object.getPrototypeOf(proto);
   }
   return null;
@@ -275,4 +320,30 @@ function __aopMatch(match, beanFullName) {
     return (typeof match === 'string' && match === beanFullName) || (is.regExp(match) && match.test(beanFullName));
   }
   return match.some(item => __aopMatch(item, beanFullName));
+}
+
+function __setPropertyValue(obj, prop, value) {
+  Object.defineProperty(obj, prop, {
+    enumerable: false,
+    configurable: true,
+    get() {
+      return value;
+    },
+  });
+}
+
+function __hasMagicMothod(instance) {
+  return !!instance.__get__ || !!instance.__set__;
+}
+
+function __methodTypeOfDescriptor(descriptorInfo) {
+  if (!descriptorInfo) return null;
+  const { descriptor, dynamic } = descriptorInfo;
+  if (dynamic) return null;
+  if (descriptor.get) return null;
+  const methodType = descriptor.value?.constructor?.name;
+  if (['Function', 'AsyncFunction'].includes(methodType)) {
+    return methodType;
+  }
+  return null;
 }

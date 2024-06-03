@@ -3,12 +3,23 @@ export default {
     default: 'a-app:appDefault',
     base: 'a-app:appBase',
     unclassified: 'a-appbooster:appUnclassified',
+    general: 'a-appbooster:appGeneral',
   },
   appMenu: {
     categoriesTop: {
-      'a-app:appDefault': ['General', 'Management', 'System'],
+      'a-app:appDefault': [
+        'AppCategoryServices',
+        'AppCategoryCMS',
+        'AppCategoryBusiness',
+        'AppCategoryManagement',
+        'AppCategorySettings',
+      ],
       'a-appbooster:appGeneral': ['Create', 'List', 'Tools'],
-      'a-appbooster:appSystem': ['BasicProfile', 'BasicAdmin', 'Settings', 'Tools'],
+      'a-appbooster:appSystem': ['BasicProfile', 'BasicAdmin', 'Settings', 'RuntimeData', 'Tools'],
     },
+  },
+  appInit: {
+    default: null,
+    'localhost:9092': null,
   },
 };

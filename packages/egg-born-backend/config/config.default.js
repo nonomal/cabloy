@@ -14,11 +14,36 @@ const {
 module.exports = appInfo => {
   const config = {};
 
+  const _maintenanceEnus =
+    'Under development and maintenance, the source code mode may be unstable. Please keep an eye on the development progress, or use the project mode to create a CabloyJS project.';
+  const _maintenanceZhcn =
+    '正在开发维护当中，源码模式可能存在不稳定情况。请持续关注开发进度，或者使用项目模式来创建CabloyJS项目。';
+  const _maintenance = _config.backend.maintenance;
+  if (_maintenance) {
+    const message = typeof _maintenance === 'string' ? _maintenance : `${_maintenanceEnus}\n${_maintenanceZhcn}`;
+    console.log(chalk.keyword('orange')(message));
+    setTimeout(() => {
+      console.log(chalk.keyword('orange')(message));
+    }, 7000);
+  }
+
+  // headers for proxy
+  config.hostHeaders = 'x-forwarded-host,host';
+  config.protocolHeaders = 'x-forwarded-proto';
+  config.ipHeaders = 'x-forwarded-for';
+
   // cluster
   config.cluster = {
     listen: {
       port: _config.backend.port,
       hostname: _config.backend.hostname,
+    },
+  };
+
+  // versionReady
+  config.versionReady = {
+    retry: {
+      timeout: 3000,
     },
   };
 
@@ -174,8 +199,6 @@ module.exports = appInfo => {
     },
     worker: {
       lockDuration: 30 * 1000,
-    },
-    scheduler: {
       maxStalledCount: 1000,
       stalledInterval: 10 * 1000,
     },
@@ -186,24 +209,30 @@ module.exports = appInfo => {
     app: true,
     agent: false,
     default: {
+      debug: false,
+      hook: {
+        meta: {
+          color: 'orange',
+          long_query_time: 0,
+        },
+        callback: {
+          onConnection,
+          onQuery,
+        },
+      },
+      typeCast(field, next) {
+        if (field.type === 'JSON') {
+          return field.stringJSON();
+        }
+        return next();
+      },
+      //
       connectionLimit: 10,
       connectionLimitInner: 5,
     },
     clients: {
       // donnot change the name
-      __ebdb: {
-        // debug: true,
-        hook: {
-          meta: {
-            color: 'orange',
-            long_query_time: 0,
-          },
-          callback: {
-            onConnection,
-            onQuery,
-          },
-        },
-      },
+      __ebdb: {},
     },
   };
 
@@ -212,8 +241,22 @@ module.exports = appInfo => {
     app: true,
     agent: false,
     default: {
+      host: '127.0.0.1',
+      port: 6379,
+      password: '',
+      db: 0,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+    },
+    clients: {
+      redlock: {},
+      limiter: {},
+      queue: {},
+      broadcast: {},
+      cache: { keyPrefix: `cache_${appInfo.name}:` },
+      io: { keyPrefix: `io_${appInfo.name}:` },
+      auth: { keyPrefix: `auth_${appInfo.name}:` },
+      summer: { keyPrefix: `summer_${appInfo.name}:` },
     },
   };
 
@@ -231,6 +274,8 @@ module.exports = appInfo => {
           err.code = 401;
           err.status = 401;
         }
+        // should show error for more scenes
+        // if (!ctx.app.meta.isTest) return false;
       }
       return true;
     },
@@ -286,9 +331,9 @@ function getFullPath(ctx, dir, filename, options) {
   return fullPath;
 }
 
-function onQuery(hook, ms, sequence /* , args*/) {
+function onQuery(hook, ms, query /* , args*/) {
   if (!hook.meta.long_query_time || hook.meta.long_query_time < ms) {
-    const message = `threadId: ${sequence._connection.threadId}, ${ms}ms ==> ${sequence.sql}`;
+    const message = `connectionId: ${query._connection.connectionId}, ${ms}ms ==> ${query.sql}`;
     console.log(chalk.keyword(hook.meta.color)(message));
   }
 }

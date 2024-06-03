@@ -1,7 +1,4 @@
-import Vue from 'vue';
-const ebClipboard = Vue.prototype.$meta.module.get('a-components').options.mixins.ebClipboard;
 export default {
-  mixins: [ebClipboard],
   data() {
     return {
       iconsAll: null,
@@ -20,25 +17,18 @@ export default {
     this._loadIcons();
   },
   methods: {
+    async onClickCopy(svg) {
+      const useStoreClipboard = await this.$store.use('a/clipboard/clipboard');
+      useStoreClipboard.copy(svg, { ctx: this });
+    },
     onClickEnable() {
       this.$refs.searchbar.f7Searchbar.enable(true);
     },
     _onSearch(query) {
       this.query = query;
-      this._resetClipboards();
-    },
-    _resetClipboards() {
-      this.$nextTick(() => {
-        this.removeAllClipboardTriggers();
-        const domCells = this.$$('.box-grid-cell', this.$el);
-        for (let index = 0; index < domCells.length; index++) {
-          this.addClipboardTrigger(domCells[index]);
-        }
-      });
     },
     async _loadIcons() {
       this.iconsAll = await this.$api.post('icon/getIcons');
-      this._resetClipboards();
     },
     _combineIconName(moduleName, groupName, icon) {
       if (moduleName === 'a-iconbooster') moduleName = '';
@@ -88,7 +78,7 @@ export default {
         if (this.query && icon.indexOf(this.query) === -1) continue;
         const svg = this._combineIconName(moduleName, groupName, icon);
         children.push(
-          <div key={icon} class="box-grid-cell" data-clipboard-text={svg}>
+          <div key={icon} class="box-grid-cell" onClick={() => this.onClickCopy(svg)}>
             <div class="box-grid-cell-icon">
               <f7-icon f7={svg} size="24"></f7-icon>
             </div>
@@ -116,7 +106,7 @@ export default {
   },
   render() {
     return (
-      <eb-page class="eb-icons-all-page">
+      <eb-page>
         <eb-navbar title={this.pageTitle} eb-back-link="Back">
           <f7-nav-right>
             <f7-link iconF7="::search" onClick={this.onClickEnable}></f7-link>

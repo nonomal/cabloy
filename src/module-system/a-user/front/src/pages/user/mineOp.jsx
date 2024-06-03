@@ -28,12 +28,7 @@ export default {
       return userName;
     },
     userAvatar() {
-      let avatar = this.user.op.avatar;
-      if (!avatar) {
-        const configBase = this.$meta.config.modules['a-base'];
-        avatar = configBase.user.avatar.default;
-      }
-      return this.$meta.util.combineImageUrl(avatar, 48);
+      return this.$meta.util.combineAvatarUrl(this.user.op.avatar, 48);
     },
     viewEnable() {
       return this.$meta.vueApp.layout === 'pc' && this.$meta.vueLayout.closePanel;
@@ -47,7 +42,10 @@ export default {
       this.resourcesArrayAll = await this.$store.dispatch('a/base/getResourcesArray', {
         resourceType: this.resourceType,
       });
-      this.treeData = await this.$store.dispatch('a/base/getCategoryTreeResource', { resourceType: this.resourceType });
+      this.treeData = await this.$store.dispatch('a/base/getCategoryTreeResourceMenu', {
+        resourceType: this.resourceType,
+        appKey: 'a-app:appDefault',
+      });
     },
     __getMineItemsOfCategory(category) {
       return this.resourcesArrayAll.filter(item => item.atomCategoryId === category.id);

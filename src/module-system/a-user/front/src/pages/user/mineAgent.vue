@@ -10,12 +10,6 @@
         :eb-href="configAccount.url.passwordChange"
         eb-target="_self"
       ></eb-list-item>
-      <eb-list-item
-        :title="$text('Authentications')"
-        link="#"
-        eb-href="user/authentications"
-        eb-target="_self"
-      ></eb-list-item>
       <f7-list-item divider></f7-list-item>
       <eb-list-item :title="$text('Appearance')" link="#" eb-href="user/appearance" eb-target="_self"></eb-list-item>
       <eb-list-item
@@ -54,12 +48,7 @@ export default {
       return userName;
     },
     userAvatar() {
-      let avatar = this.user.op.avatar;
-      if (!avatar) {
-        const configBase = this.$meta.config.modules['a-base'];
-        avatar = configBase.user.avatar.default;
-      }
-      return this.$meta.util.combineImageUrl(avatar, 48);
+      return this.$meta.util.combineAvatarUrl(this.user.op.avatar, 48);
     },
     viewEnable() {
       return this.$meta.vueApp.layout === 'pc' && this.$meta.vueLayout.closePanel;

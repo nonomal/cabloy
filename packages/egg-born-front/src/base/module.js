@@ -1,6 +1,7 @@
 import mparse from 'egg-born-mparse';
-import modulesRepo from '../../__runtime/modules.js';
 import nprogressFn from './nprogress.js';
+
+const __ComponentInstallFactoryProps = ['render', 'staticRenderFns', '__ebModuleRelativeName', '__file', '_compiled'];
 
 export default function (Vue) {
   const loadingQueue = {
@@ -22,6 +23,9 @@ export default function (Vue) {
   const nprogress = nprogressFn(Vue);
 
   const module = {
+    _getModulesRepo() {
+      return this._get('main').options.modulesRepo;
+    },
     _get(relativeName) {
       return Vue.prototype.$meta.modules[relativeName || 'main'];
     },
@@ -38,8 +42,12 @@ export default function (Vue) {
     },
     set(relativeName, module) {
       Vue.prototype.$meta.modules[relativeName] = module;
-      if (module.info.monkey) {
-        Vue.prototype.$meta.modulesMonkey[relativeName] = module;
+      // monkey
+      if (module.name === 'main' && module.options.monkey) {
+        Vue.prototype.$meta.modulesMonkey.push(module);
+      } else if (module.info.monkey) {
+        const length = Vue.prototype.$meta.modulesMonkey.length;
+        Vue.prototype.$meta.modulesMonkey.splice(length - 1, 0, module);
       }
     },
     // use
@@ -54,7 +62,7 @@ export default function (Vue) {
         const relativeName = moduleInfo.relativeName;
         const module = this._get(relativeName);
         if (module) return cb(module);
-        const moduleRepo = modulesRepo.modules[relativeName];
+        const moduleRepo = this._getModulesRepo().modules[relativeName];
         if (!moduleRepo) {
           const message = Vue.prototype.$text('ModuleNotExists');
           throw new Error(`${message}: ${relativeName}`);
@@ -87,16 +95,30 @@ export default function (Vue) {
         });
       }
     },
+    async tryUse(moduleName) {
+      try {
+        const module = await this.use(moduleName);
+        return module;
+      } catch (err) {
+        return null;
+      }
+    },
     loadWaitings() {
       for (const key in Vue.prototype.$meta.modulesWaiting) {
         this._registerRoutes(Vue.prototype.$meta.modulesWaiting[key]);
       }
     },
     monkeyModule(monkeyName, monkeyData) {
-      for (const key in Vue.prototype.$meta.modulesMonkey) {
-        const moduleMonkey = Vue.prototype.$meta.modulesMonkey[key];
+      const module = monkeyData && monkeyData.module;
+      if (module) {
+        if (module.options.hook && module.options.hook[monkeyName]) {
+          module.options.hook[monkeyName](monkeyData);
+        }
+      }
+      for (const moduleMonkey of Vue.prototype.$meta.modulesMonkey) {
         if (moduleMonkey.options.monkey && moduleMonkey.options.monkey[monkeyName]) {
-          moduleMonkey.options.monkey[monkeyName](monkeyData);
+          const monkeyData2 = Object.assign({ moduleSelf: moduleMonkey }, monkeyData);
+          moduleMonkey.options.monkey[monkeyName](monkeyData2);
         }
       }
     },
@@ -134,7 +156,7 @@ export default function (Vue) {
     },
     async _import(relativeName) {
       return new Promise((resolve, reject) => {
-        const moduleRepo = modulesRepo.modules[relativeName];
+        const moduleRepo = this._getModulesRepo().modules[relativeName];
         if (!moduleRepo) {
           return reject(new Error(`Module ${relativeName} not exists`));
         }
@@ -157,19 +179,19 @@ export default function (Vue) {
       });
     },
     requireAllMonkeys() {
-      for (const relativeName in modulesRepo.modulesMonkey) {
-        const moduleRepo = modulesRepo.modules[relativeName];
+      for (const relativeName in this._getModulesRepo().modulesMonkey) {
+        const moduleRepo = this._getModulesRepo().modules[relativeName];
         this._requireJS(moduleRepo);
       }
     },
     requireAllSyncs() {
-      for (const relativeName in modulesRepo.modulesSync) {
-        const moduleRepo = modulesRepo.modules[relativeName];
+      for (const relativeName in this._getModulesRepo().modulesSync) {
+        const moduleRepo = this._getModulesRepo().modules[relativeName];
         this._requireJS(moduleRepo);
       }
     },
     _require(relativeName, cb) {
-      const moduleRepo = modulesRepo.modules[relativeName];
+      const moduleRepo = this._getModulesRepo().modules[relativeName];
       if (!moduleRepo) throw new Error(`Module ${relativeName} not exists`);
       this._requireJS(moduleRepo, cb);
     },
@@ -187,51 +209,59 @@ export default function (Vue) {
     },
     _registerRoutes(module) {
       if (!module.options.routes) return null;
-      const routes = module.options.routes.map(route => {
-        Vue.prototype.$meta.util._setComponentModule(route.component, route.module || module);
-        // path
-        route.path = `/${module.info.pid}/${module.info.name}/${route.path}`;
-        // meta.modal
-        if (route.meta && route.meta.modal) {
-          route[route.meta.modal] = {
-            component: route.component,
-          };
+      const routes = [];
+      for (const route of module.options.routes) {
+        this._registerRoute(module, route);
+        routes.push(route);
+      }
+      Vue.prototype.$f7.routes = Vue.prototype.$f7.routes.concat(routes);
+    },
+    _registerRoute(module, route) {
+      // module info
+      this._setComponentModule(route.component, route.module || module);
+      // installFactory
+      route.component = this._setComponentLoadForInstallFactory(route.component);
+      // path
+      route.path = `/${module.info.pid}/${module.info.name}/${route.path}`;
+      // meta.modal
+      if (route.meta && route.meta.modal) {
+        route[route.meta.modal] = {
+          component: route.component,
+        };
+        route.component = null;
+      }
+      // meta.auth
+      if (route.meta && route.meta.auth) {
+        route.async = function (routeTo, routeFrom, resolve, reject) {
+          if (Vue.prototype.$meta.store.state.auth.loggedIn) {
+            const _component = {};
+            if (route.meta.modal) {
+              _component[route.meta.modal] = route.async[route.meta.modal];
+            } else {
+              _component.component = route.async.component;
+            }
+            resolve(_component);
+          } else {
+            // login
+            Vue.prototype.$meta.vueLayout.openLogin({
+              view: this.view,
+              url: routeTo,
+            });
+            reject();
+          }
+        };
+        if (route.meta.modal) {
+          route.async[route.meta.modal] = route[route.meta.modal];
+          route[route.meta.modal] = null;
+        } else {
+          route.async.component = route.component;
           route.component = null;
         }
-        // meta.auth
-        if (route.meta && route.meta.auth) {
-          route.async = function (routeTo, routeFrom, resolve, reject) {
-            if (Vue.prototype.$meta.store.state.auth.loggedIn) {
-              const _component = {};
-              if (route.meta.modal) {
-                _component[route.meta.modal] = route.async[route.meta.modal];
-              } else {
-                _component.component = route.async.component;
-              }
-              resolve(_component);
-            } else {
-              // login
-              Vue.prototype.$meta.vueLayout.openLogin({
-                view: this.view,
-                url: routeTo,
-              });
-              reject();
-            }
-          };
-          if (route.meta.modal) {
-            route.async[route.meta.modal] = route[route.meta.modal];
-            route[route.meta.modal] = null;
-          } else {
-            route.async.component = route.component;
-            route.component = null;
-          }
-        }
-        return route;
-      });
-      Vue.prototype.$f7.routes = Vue.prototype.$f7.routes.concat(routes);
+      }
     },
     _registerResources(module) {
       module.options.components && this._registerComponents(module);
+      module.options.stores && this._registerStores(module);
       module.options.store && this._registerStore(module);
       module.options.config && this._registerConfig(module);
       module.options.locales && this._registerLocales(module);
@@ -239,8 +269,21 @@ export default function (Vue) {
     _registerComponents(module) {
       for (const key in module.options.components) {
         const component = module.options.components[key];
-        Vue.prototype.$meta.util._setComponentModule(component, component.module || module);
-        Vue.prototype.$meta.util._setComponentGlobal(component);
+        this._setComponentModule(component, component.module || module);
+        this._setComponentGlobal(component);
+      }
+    },
+    _registerStores(module) {
+      const $store = Vue.prototype.$meta.store;
+      const $pinia = Vue.prototype.$meta.pinia;
+      for (const key in module.options.stores) {
+        let store = module.options.stores[key];
+        if (typeof store === 'function') {
+          store = store(Vue);
+        }
+        const fullKey = `${module.info.url}/${key}`;
+        const useStore = $store.defineStore(fullKey, store);
+        $store.registerStore(fullKey, useStore($pinia));
       }
     },
     _registerStore(module) {
@@ -281,6 +324,70 @@ export default function (Vue) {
           Vue.prototype.$meta.locales[key]
         );
       });
+    },
+    async useComponent(moduleName, componentName) {
+      // use module
+      const module = await this.use(moduleName);
+      let component = module.options.components[componentName];
+      if (!component) return null;
+      // installFactory
+      if (component.installFactory) {
+        component = await this._handleInstallFactory(component);
+        // hold
+        module.options.components[componentName] = component;
+      }
+      // ok
+      return component;
+    },
+    async _handleInstallFactory(component) {
+      // uses
+      await this.useModules(component.meta?.uses);
+      // installFactory
+      const componentNew = component.installFactory(Vue);
+      // merge render etc.
+      for (const prop of __ComponentInstallFactoryProps) {
+        if (component[prop]) {
+          componentNew[prop] = component[prop];
+        }
+      }
+      // global
+      this._setComponentGlobal(componentNew);
+      // ok
+      return componentNew;
+    },
+    _setComponentLoadForInstallFactory(component) {
+      if (!component || !component.installFactory) return component;
+      return async () => {
+        return await this._handleInstallFactory(component);
+      };
+    },
+    _setComponentGlobal(component) {
+      // register
+      if (component.meta?.global === true) {
+        if (!Vue.options.components[component.name]) {
+          Vue.component(component.name, component);
+        }
+      }
+      return component;
+    },
+    _setComponentModule(component, module) {
+      if (!component) return;
+      component.__ebModuleRelativeName = module.info.relativeName;
+    },
+    async preloadModules(modules, options) {
+      options = options || {};
+      const delay = options.delay || Vue.prototype.$meta.config.preload.delay;
+      window.setTimeout(() => {
+        this.useModules(modules);
+      }, delay);
+    },
+    async useModules(modules) {
+      if (!modules) return;
+      if (!Array.isArray(modules)) modules = modules.split(',');
+      modules = modules.filter(module => !this.get(module));
+      if (modules.length === 0) return;
+      const promises = modules.map(module => this.use(module));
+      await Promise.all(promises);
     },
   };
 

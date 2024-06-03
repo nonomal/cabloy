@@ -11,4 +11,13 @@ export default {
   'Atom Actions': 'Data Actions',
   Atoms: 'Data',
   AddChild: 'Add Child',
+  AuthorizationSource: 'Auth Source',
+  AuthorizationObjective: 'Auth Objective',
+  DataScope: 'Data Scope',
+  DataScopeSelfTitle: 'Operate Self Data',
+  DataScopeTitle: 'Data Scope',
+  SelectDataScope: 'Select Data Scope',
+  AddRoleInherit: 'Add Role Inherit',
+  FieldsRight: 'Fields Right',
+  FieldsRightRole_Level: 'Level',
 };

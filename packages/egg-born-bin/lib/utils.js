@@ -1,9 +1,10 @@
 const path = require('path');
+const fse = require('fs-extra');
 const urllib = require('urllib');
 const semver = require('semver');
 const chalk = require('chalk');
 const boxen = require('boxen');
-const extend = require('extend2');
+const extend = require('@zhennann/extend');
 const eggBornUtils = require('egg-born-utils');
 
 const boxenOptions = { padding: 1, margin: 1, align: 'center', borderColor: 'yellow', borderStyle: 'round' };
@@ -43,7 +44,7 @@ const utils = {
       }
       return true;
     } catch (err) {
-      if (err.status === -1 && err.address === '127.0.0.1') {
+      if (err.status === -1 && (err.address === '::1' || err.address === '127.0.0.1')) {
         if (needDevServer) {
           const message = `Run ${chalk.keyword('orange')('> npm run dev:backend <')} first!`;
           console.log('\n' + boxen(message, boxenOptions) + '\n');
@@ -54,10 +55,39 @@ const utils = {
       // return true;
     }
   },
+  async forceDevServerRunning(options) {
+    // check if running
+    let devServerRunning = await this.checkIfDevServerRunning({
+      projectPath: options.projectPath,
+      needDevServer: false,
+      warnWhenRunning: false,
+    });
+    if (devServerRunning) return null;
+    // start
+    const Command = require('../index.js');
+    const commandDev = new Command(['backend-dev', '--workers=1']);
+    commandDev.start();
+    // check if running
+    while (true) {
+      // sleep
+      await eggBornUtils.tools.sleep(1000);
+      // check
+      devServerRunning = await this.checkIfDevServerRunning({
+        projectPath: options.projectPath,
+        needDevServer: false,
+        warnWhenRunning: false,
+      });
+      if (devServerRunning) {
+        break;
+      }
+    }
+    // proc
+    return commandDev.subCommand.proc;
+  },
   async versionCheck({ moduleName, moduleVersion, scene, mode }) {
     try {
       const httpClient = urllib.create();
-      const url = 'https://admin.cabloy.com/api/cabloy/store/util/version';
+      const url = 'https://portal.cabloy.com/api/cabloy/store/util/version';
       const options = {
         method: 'POST',
         data: {
@@ -108,7 +138,7 @@ const utils = {
         )} → ${chalk.keyword('orange')(moduleVersionCurrent)}`;
         if (mode === 'lerna') {
           message += `\nRun ${chalk.keyword('orange')('> git pull <')} to update cabloy!`;
-          message += `\nRun ${chalk.keyword('orange')('> lerna bootstrap <')} to install dependencies!`;
+          message += `\nRun ${chalk.keyword('orange')('> npm install <')} to install dependencies!`;
         } else {
           // message += `\nRun ${chalk.keyword('orange')('> npm update <')} to update cabloy!`;
           // message += `\nRun ${chalk.keyword('orange')('> npm run update:test <')} to update the test modules!`;
@@ -133,6 +163,10 @@ const utils = {
   loadEnvConfig({ baseDir, env }) {
     const fileConfigDefault = path.join(baseDir, 'config/config.default.js');
     const fileConfigEnv = path.join(baseDir, `config/config.${env}.js`);
+    if (!fse.existsSync(fileConfigDefault)) {
+      console.log(chalk.red('Please copy directory: from _config to config\n'));
+      process.exit(0);
+    }
     const configDefault = require(fileConfigDefault)({});
     const configEnv = require(fileConfigEnv)({});
     return extend(true, {}, configDefault, configEnv);

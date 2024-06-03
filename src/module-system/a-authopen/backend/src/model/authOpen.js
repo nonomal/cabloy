@@ -1,8 +1,5 @@
-module.exports = app => {
-  class AuthOpen extends app.meta.Model {
-    constructor(ctx) {
-      super(ctx, { table: 'aAuthOpen', options: { disableDeleted: false } });
-    }
+module.exports = class AuthOpen extends module.meta.class.Model {
+  constructor() {
+    super({ table: 'aAuthOpen', options: { disableDeleted: false } });
   }
-  return AuthOpen;
 };

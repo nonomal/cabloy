@@ -44,11 +44,12 @@ module.exports = app => {
     }
 
     async write({ atomClass, target, key, item, options, user }) {
+      // check demo
+      this.ctx.bean.util.checkDemoForAtomWrite();
       // super
       await super.write({ atomClass, target, key, item, options, user });
       // update layout
       const data = await this.ctx.model.layout.prepareData(item);
-      data.id = key.itemId;
       await this.ctx.model.layout.update(data);
       // update content
       await this.ctx.model.layoutContent.update(
@@ -407,9 +408,10 @@ module.exports = app => {
   schemas.filterTabGeneral = {
     type: 'object',
     properties: {
+      // need not
       stage: {
         type: 'string',
-        ebType: 'select',
+        // ebType: 'select',
         ebTitle: 'Stage',
         ebParams: { openIn: 'sheet', closeOnSelect: true },
         ebDisplay: {
@@ -419,9 +421,10 @@ module.exports = app => {
           tableAlias: null,
         },
       },
+      // need not
       mine: {
         type: 'number',
-        ebType: 'toggle',
+        // ebType: 'toggle',
         ebTitle: 'Mine',
         ebDisplay: {
           expression: '!_meta.host.container.options || !_meta.host.container.options.mine',
@@ -652,6 +655,8 @@ module.exports = app => {
             },
             inner: true,
             resource: true,
+            comment: false,
+            attachment: false,
             dict: {
               fields: {
                 layoutTypeCode: {

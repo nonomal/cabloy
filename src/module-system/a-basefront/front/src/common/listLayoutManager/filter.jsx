@@ -4,21 +4,30 @@ export default {
   },
   methods: {
     async filter_onPrepareData() {
+      // options
+      const options = this.container.options || {};
+      // state: maybe 0
+      let state = options.state;
+      if (state === undefined || state === null) {
+        state = null;
+      }
       // form
       const form = {
         atomName: null,
-        mine: (this.container.options && this.container.options.mine) || 0,
-        stage: (this.container.options && this.container.options.stage) || 'formal',
-        language: (this.container.options && this.container.options.language) || '',
-        category: (this.container.options && this.container.options.category) || 0,
-        tag: (this.container.options && this.container.options.tag) || 0,
-        star: (this.container.options && this.container.options.star) || 0,
-        label: (this.container.options && this.container.options.label) || 0,
-        role: (this.container.options && this.container.options.role) || 0,
-        roleName: (this.container.options && this.container.options.roleName) || null,
-        roleNameLocale: (this.container.options && this.container.options.roleNameLocale) || null,
+        mine: options.mine || 0,
+        stage: options.stage || 'formal',
+        state,
+        language: options.language || '',
+        category: options.category || 0,
+        tag: options.tag || 0,
+        star: options.star || 0,
+        label: options.label || 0,
+        role: options.role || 0,
+        roleName: options.roleName || null,
+        roleNameLocale: options.roleNameLocale || null,
         atomClass: this.container.atomClass,
       };
+      // formAtomClass
       const formAtomClass = this.$meta.util.getProperty(this.container, 'params.filter.formAtomClass') || {};
       // validator: tabBasic/tabGeneral
       const schemaBasic = await this.filter_loadSchemaBasic();
@@ -121,6 +130,25 @@ export default {
         }
         if (form.tag) {
           options.tag = form.tag;
+        }
+        // state
+        if (!this.$meta.util.checkIfEmptyForSelect(form.state)) {
+          const _clause = this.$meta.util.combineSearchClauseProperty({
+            ctx: this,
+            dataKey: 'atomState',
+            property: {
+              type: 'string',
+              ebType: 'dict',
+              ebSearch: {
+                tableAlias: 'a',
+              },
+            },
+            operator: null,
+            value: form.state,
+          });
+          if (_clause) {
+            Object.assign(options.where, _clause);
+          }
         }
       }
       // formAtomClass

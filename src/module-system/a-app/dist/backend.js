@@ -55,11 +55,12 @@ module.exports = app => {
     }
 
     async write({ atomClass, target, key, item, options, user }) {
+      // check demo
+      this.ctx.bean.util.checkDemoForAtomWrite();
       // super
       await super.write({ atomClass, target, key, item, options, user });
       // update app
       const data = await this.ctx.model.app.prepareData(item);
-      data.id = key.itemId;
       await this.ctx.model.app.update(data);
       // update content
       await this.ctx.model.appContent.update(
@@ -155,6 +156,23 @@ module.exports = app => {
         `;
         await this.ctx.model.query(sql);
       }
+
+      if (options.version === 2) {
+        let sql = `
+          ALTER TABLE aApp
+            ADD COLUMN appHidden int(11) DEFAULT '0'
+        `;
+        await this.ctx.model.query(sql);
+
+        // alter view: aAppViewFull
+        await this.ctx.model.query('drop view aAppViewFull');
+        sql = `
+          CREATE VIEW aAppViewFull as
+            select a.*,b.content from aApp a
+              left join aAppContent b on a.id=b.itemId
+        `;
+        await this.ctx.model.query(sql);
+      }
     }
 
     async init(options) {
@@ -240,6 +258,13 @@ module.exports = {};
 module.exports = {
   AppMenu: 'App Menu',
   AppHome: 'App Home',
+  AppCategoryFront: 'Front Apps',
+  AppCategoryBackend: 'Backend Apps',
+  AppCategoryManagement: 'Management',
+  AppCategoryServices: 'Services',
+  AppCategoryCMS: 'CMS',
+  AppCategoryBusiness: 'Business',
+  AppCategorySettings: 'Settings',
 };
 
 
@@ -256,6 +281,13 @@ module.exports = {
   AppMenu: '应用菜单',
   AppHome: '应用首页',
   Icon: '图标',
+  AppCategoryFront: '前台应用',
+  AppCategoryBackend: '后台应用',
+  AppCategoryManagement: '管理',
+  AppCategoryServices: '服务',
+  AppCategoryCMS: 'CMS',
+  AppCategoryBusiness: '业务',
+  AppCategorySettings: '设置',
 };
 
 
@@ -344,11 +376,12 @@ module.exports = app => {
   const _app = {
     atomName: 'Base',
     atomStaticKey: 'appBase',
-    atomRevision: 0,
+    atomRevision: 1,
     atomCategoryId: 0,
     description: '',
     appIcon: ':outline:apps-outline',
     appIsolate: true,
+    appHidden: 1,
     content: JSON.stringify(content),
     resourceRoles: 'root',
     appSorting: 0,
@@ -431,11 +464,12 @@ module.exports = app => {
   const _app = {
     atomName: 'Default',
     atomStaticKey: 'appDefault',
-    atomRevision: 2,
+    atomRevision: 3,
     atomCategoryId: 0,
     description: '',
     appIcon: ':outline:apps-outline',
     appIsolate: true,
+    appHidden: 1,
     content: JSON.stringify(content),
     resourceRoles: 'root',
     appSorting: 0,
@@ -754,6 +788,11 @@ module.exports = app => {
         ebType: 'toggle',
         ebTitle: 'AppIsolateTitle',
       },
+      appHidden: {
+        type: 'number',
+        ebType: 'toggle',
+        ebTitle: 'AppHiddenTitle',
+      },
       appLanguage: {
         type: 'number',
         ebType: 'toggle',
@@ -816,11 +855,33 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 95:
+/***/ 696:
 /***/ ((module) => {
 
 module.exports = app => {
-  const controllers = {};
+  class ResourceController extends app.Controller {
+    async read() {
+      const res = await this.ctx.service.resource.read({
+        atomStaticKey: this.ctx.request.body.atomStaticKey,
+        options: this.ctx.request.body.options,
+        user: this.ctx.state.user.op,
+      });
+      this.ctx.success(res);
+    }
+  }
+
+  return ResourceController;
+};
+
+
+/***/ }),
+
+/***/ 95:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const resource = __webpack_require__(696);
+module.exports = app => {
+  const controllers = { resource };
   return controllers;
 };
 
@@ -893,6 +954,8 @@ module.exports = app => {
             language: false,
             category: true,
             tag: false,
+            comment: false,
+            attachment: false,
             layout: {
               config: {
                 atomList: 'layoutAtomListApp',
@@ -1008,18 +1071,41 @@ module.exports = app => {
 /***/ ((module) => {
 
 module.exports = app => {
-  const routes = [];
+  const routes = [
+    // resource
+    { method: 'post', path: 'resource/read', controller: 'resource' },
+  ];
   return routes;
 };
 
 
 /***/ }),
 
-/***/ 214:
+/***/ 55:
 /***/ ((module) => {
 
 module.exports = app => {
-  const services = {};
+  class Resource extends app.Service {
+    async read({ atomStaticKey, options, user }) {
+      // donot check user access right, but must check atomClass
+      const appItem = await this.ctx.bean.resource.readByStaticKey({ atomStaticKey, options /* , user*/ });
+      if (appItem.module !== 'a-app' || appItem.atomClassName !== 'app') this.ctx.throw(403);
+      return appItem;
+    }
+  }
+
+  return Resource;
+};
+
+
+/***/ }),
+
+/***/ 214:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const resource = __webpack_require__(55);
+module.exports = app => {
+  const services = { resource };
   return services;
 };
 

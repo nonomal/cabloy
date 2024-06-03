@@ -378,6 +378,7 @@ module.exports = app => {
 
     async themeLoad() {
       const res = await this.service.user.themeLoad({
+        appKey: this.ctx.request.body.appKey,
         user: this.ctx.state.user.agent,
       });
       this.ctx.success(res);
@@ -385,6 +386,7 @@ module.exports = app => {
 
     async themeSave() {
       await this.service.user.themeSave({
+        appKey: this.ctx.request.body.appKey,
         theme: this.ctx.request.body.theme,
         user: this.ctx.state.user.agent,
       });
@@ -590,10 +592,9 @@ module.exports = app => {
 /***/ }),
 
 /***/ 323:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+/***/ ((module) => {
 
-const require3 = __webpack_require__(638);
-const extend = require3('extend2');
+const __appKeyDefault = 'a-app:appDefault';
 
 module.exports = app => {
   class User extends app.Service {
@@ -654,7 +655,7 @@ module.exports = app => {
 
     async authentications({ user }) {
       // 1. get auth providers list from a-login
-      let listLogin = extend(true, [], this.ctx.bean.authProviderCache.getAuthProvidersConfigForLogin());
+      let listLogin = this.ctx.bean.util.extend([], this.ctx.bean.authProviderCache.getAuthProvidersConfigForLogin());
       if (listLogin.length === 0) return [];
       // 2. list aAuth
       const sql = `
@@ -712,14 +713,18 @@ module.exports = app => {
       ]);
     }
 
-    async themeLoad({ user }) {
-      const name = `user-theme:${user.id}`;
-      return await this.ctx.bean.status.get(name);
+    async themeLoad({ appKey, user }) {
+      const key = this._getThemeKey({ appKey, user });
+      return await this.ctx.bean.status.get(key);
     }
 
-    async themeSave({ theme, user }) {
-      const name = `user-theme:${user.id}`;
-      await this.ctx.bean.status.set(name, theme);
+    async themeSave({ appKey, theme, user }) {
+      const key = this._getThemeKey({ appKey, user });
+      await this.ctx.bean.status.set(key, theme);
+    }
+
+    _getThemeKey({ appKey, user }) {
+      return `user-theme:${user.id}:${appKey || __appKeyDefault}`;
     }
   }
 
@@ -743,14 +748,6 @@ module.exports = app => {
   return services;
 };
 
-
-/***/ }),
-
-/***/ 638:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("require3");
 
 /***/ })
 

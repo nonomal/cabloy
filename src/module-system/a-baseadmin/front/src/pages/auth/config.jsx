@@ -1,12 +1,11 @@
 import Vue from 'vue';
-const ebClipboard = Vue.prototype.$meta.module.get('a-components').options.mixins.ebClipboard;
 const ebPageContext = Vue.prototype.$meta.module.get('a-components').options.mixins.ebPageContext;
 const ebPageDirty = Vue.prototype.$meta.module.get('a-components').options.mixins.ebPageDirty;
 export default {
   meta: {
     global: false,
   },
-  mixins: [ebClipboard, ebPageContext, ebPageDirty],
+  mixins: [ebPageContext, ebPageDirty],
   data() {
     return {
       sceneName: this.$f7route.query.sceneName,
@@ -36,7 +35,7 @@ export default {
   },
   methods: {
     async init() {
-      await this._prepareScheme();
+      await this._prepareSchema();
       this._prepareData();
     },
     onFormSubmit() {
@@ -55,17 +54,17 @@ export default {
       this.$f7router.back();
       return true; // toast on success
     },
-    async _prepareScheme() {
+    async _prepareSchema() {
       const metaScene = this._getMetaScene();
       // schema
-      const schema = await this.$api.post('/a/validation/validation/schema', {
+      const useStoreSchemas = await this.$store.use('a/validation/schemas');
+      const schema = await useStoreSchemas.getSchema({
         module: metaScene.validator.module,
         validator: metaScene.validator.validator,
         schema: null,
       });
       // combine schema
-      this._combineSchema(schema);
-      this.schema = schema;
+      this.schema = this._combineSchema(schema);
     },
     _prepareData() {
       const data = this.$meta.util.extend({}, this.item.scenes[this.sceneName]);
@@ -96,6 +95,8 @@ export default {
     _combineSchema(schema) {
       const metaScene = this._getMetaScene();
       if (metaScene.mode !== 'redirect') return;
+      // need copy
+      schema = this.$meta.util.extend({}, schema);
       schema.schema.properties = {
         ...schema.schema.properties,
         __groupUrlInfo: {
@@ -123,19 +124,8 @@ export default {
           },
         },
       };
+      return schema;
     },
-    // clipboardCreate() {
-    //   if (!this.meta) return;
-    //   this.$nextTick(() => {
-    //     for (const btn of ['loginURL', 'callbackURL']) {
-    //       this.addClipboardTrigger(this.$refs[btn].$el, {
-    //         text: (/* trigger*/) => {
-    //           return this.meta[btn];
-    //         },
-    //       });
-    //     }
-    //   });
-    // },
     _renderValidate() {
       if (!this.ready) return;
       return (

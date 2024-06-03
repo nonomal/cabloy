@@ -1,11 +1,26 @@
-module.exports = app => {
-  class Version extends app.meta.BeanBase {
-    async update(options) {}
+const fileVersionUpdates = [];
+const fileVersionInits = [];
 
-    async init(options) {}
-
-    async test() {}
+module.exports = class Version {
+  async update(options) {
+    if (fileVersionUpdates.includes(options.version)) {
+      const VersionUpdate = require(`./version.manager/update/update${options.version}.js`);
+      const versionUpdate = this.ctx.bean._newBean(VersionUpdate);
+      await versionUpdate.run(options);
+    }
   }
 
-  return Version;
+  async init(options) {
+    if (fileVersionInits.includes(options.version)) {
+      const VersionInit = require(`./version.manager/init/init${options.version}.js`);
+      const versionInit = this.ctx.bean._newBean(VersionInit);
+      await versionInit.run(options);
+    }
+  }
+
+  async test() {
+    const VersionTest = require('./version.manager/test/test.js');
+    const versionTest = this.ctx.bean._newBean(VersionTest);
+    await versionTest.run();
+  }
 };

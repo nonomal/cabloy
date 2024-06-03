@@ -1,3 +1,5 @@
+import modulesRepo from './__runtime/modules.js';
+
 import './assets/css/app.less';
 
 import locales from './locales.js';
@@ -22,10 +24,15 @@ function install(_Vue, cb) {
   config.base.name = process.env.NAME;
   config.base.title = process.env.TITLE;
 
+  // monkey
+  const monkey = require('./config/monkey.js').default(Vue);
+
   // options
   return cb({
+    modulesRepo,
     config,
     locales,
+    monkey,
     parameters: {
       framework7: {
         name: config.base.name,

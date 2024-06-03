@@ -1,4 +1,2 @@
-module.exports = app => {
-  const aops = {};
-  return aops;
-};
+const aops = {};
+module.exports = aops;

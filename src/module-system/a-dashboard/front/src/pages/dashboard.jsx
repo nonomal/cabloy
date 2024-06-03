@@ -32,7 +32,7 @@ export default {
     return (
       <eb-page
         ref="page"
-        staticClass={`dashboard dashboard-profile-${this.dashboardAtomId} ${this.lock ? '' : 'dashboard-unlock'}`}
+        class={`dashboard dashboard-profile-${this.dashboardAtomId} ${this.lock ? '' : 'dashboard-unlock'}`}
       >
         {domNavbar}
         {domGroup}
@@ -101,7 +101,7 @@ export default {
       this.page_dirty = dirty;
       if (this.scene !== 'manager') {
         // not for manager
-        this.$pageContainer.setPageDirty(dirty);
+        this.$page.setPageDirty(dirty);
       }
     },
     __setTitle(title) {
@@ -117,7 +117,7 @@ export default {
       }
       this.title = title;
       // force set pageTitle, may be navbar rerendered
-      this.$pageContainer.setPageTitle(this.page_title);
+      this.$page.setPageTitle(this.page_title);
     },
     // actions: save/settings
     renderActionsManager() {
@@ -158,6 +158,7 @@ export default {
             key="dashboard-action-lock"
             class="dashboard-action-lock"
             iconF7="::lock"
+            tooltip={this.$text('Unlock')}
             propsOnPerform={event => this.onPerformLock(event)}
           ></eb-link>
         );
@@ -167,6 +168,7 @@ export default {
               key="dashboard-action-profileSwitch"
               class="dashboard-action-profileSwitch"
               iconF7="::view-list"
+              tooltip={this.$text('SwitchDashboardProfile')}
               propsOnPerform={event => this.onPerformProfileSwitch(event)}
             ></eb-link>
           );
@@ -178,6 +180,7 @@ export default {
             key="dashboard-action-unlock"
             class="dashboard-action-unlock"
             iconF7="::lock-open"
+            tooltip={this.$text('Lock')}
             propsOnPerform={event => this.onPerformUnlock(event)}
           ></eb-link>
         );
@@ -188,19 +191,24 @@ export default {
             key="dashboard-action-settings"
             class="dashboard-action-settings"
             iconF7="::settings"
+            tooltip={this.$text('Settings')}
             propsOnPerform={event => this.onPerformSettings(event)}
           ></eb-link>
         );
       }
-      if (this.$device.desktop && this.$meta.util.screenfull.isEnabled) {
-        children.push(
-          <eb-link
-            key="dashboard-action-fullscreen"
-            class="dashboard-action-fullscreen"
-            iconF7={this.$meta.util.screenfull.isFullscreen ? '::fullscreen-exit' : '::fullscreen'}
-            propsOnPerform={event => this.onPerformFullscreen(event)}
-          ></eb-link>
-        );
+      if (this.$device.desktop) {
+        const useStoreScreenfull = this.$store.useSync('a/screenfull/screenfull');
+        if (useStoreScreenfull && useStoreScreenfull.isEnabled) {
+          children.push(
+            <eb-link
+              key="dashboard-action-fullscreen"
+              class="dashboard-action-fullscreen"
+              iconF7={useStoreScreenfull.isFullscreen ? '::fullscreen-exit' : '::fullscreen'}
+              tooltip={useStoreScreenfull.isFullscreen ? this.$text('Exit Fullscreen') : this.$text('Fullscreen')}
+              propsOnPerform={event => this.onPerformFullscreen(event)}
+            ></eb-link>
+          );
+        }
       }
       // ok
       return children;
@@ -337,11 +345,11 @@ export default {
     __findResourceStock(resourcesAll, resource) {
       if (!resourcesAll) return null;
       let fullName = this.__resourceFullName(resource);
-      if (fullName === 'test-party:widgetSimpleChat') {
-        fullName = 'test-note:widgetSimpleChat';
+      if (fullName === 'test-note:widgetSimpleChat') {
+        fullName = 'test-party:widgetSimpleChat';
       }
-      if (fullName === 'a-dashboard:widgetAbout') {
-        fullName = 'test-note:widgetAbout';
+      if (fullName === 'a-dashboard:widgetAbout' || fullName === 'test-note:widgetAbout') {
+        fullName = 'test-party:widgetAbout';
       }
       const _resource = resourcesAll[fullName];
       if (!_resource) return null;
@@ -439,8 +447,9 @@ export default {
         },
       });
     },
-    onPerformFullscreen() {
-      this.$meta.util.screenfull.toggle(this.$el);
+    async onPerformFullscreen() {
+      const useStoreScreenfull = await this.$store.use('a/screenfull/screenfull');
+      useStoreScreenfull.toggle(this.$el);
     },
     async onPerformProfileSwitch(event) {
       if (!this.dashboardUsers) return;
@@ -451,7 +460,7 @@ export default {
       const buttons = [];
       for (const item of this.dashboardUsers) {
         buttons.push({
-          icon: dashboardUserIdCurrent === item.id ? iconDone : '<i class="icon"></i>',
+          icon: dashboardUserIdCurrent === item.id ? iconDone : this.$meta.util.emptyIcon,
           text: item.dashboardName,
           disabled: dashboardUserIdCurrent === item.id,
           data: item,

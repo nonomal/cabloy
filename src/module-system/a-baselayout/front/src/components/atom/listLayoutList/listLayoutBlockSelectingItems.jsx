@@ -44,7 +44,7 @@ export default {
           </div>
           <div class="date">
             {this.layoutManager.item_renderStats(item)}
-            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt)}</span>
+            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt || item.updatedAt)}</span>
           </div>
         </div>
       );
@@ -75,8 +75,8 @@ export default {
           class="item"
           key={item.atomId}
           name={this.radioName}
-          radio={this.layoutManager.container.params.selectMode === 'single'}
-          checkbox={this.layoutManager.container.params.selectMode === 'multiple'}
+          radio={this.layoutManager.container.params?.selectMode === 'single'}
+          checkbox={this.layoutManager.container.params?.selectMode === 'multiple'}
           checked={this._getItemChecked(item)}
           swipeout
           onChange={event => this.onItemChange(event, item)}

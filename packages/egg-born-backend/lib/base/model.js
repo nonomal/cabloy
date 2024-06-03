@@ -1,302 +1,249 @@
 const is = require('is-type-of');
-const moment = require('moment');
-const RDSClient = require('ali-rds');
 
-const __whereOrPlaceholder = '__or__';
-const __whereAndPlaceholder = '__and__';
-const __columns = {};
+let __columns = {};
 
-module.exports = app => {
-  class Model extends app.BaseContextClass {
-    constructor(ctx, { table, options = {} }) {
-      super(ctx);
-      this.table = table;
-      this.disableDeleted =
-        options.disableDeleted === undefined ? app.config.model.disableDeleted : options.disableDeleted;
-      this.disableInstance =
-        options.disableInstance === undefined ? app.config.model.disableInstance : options.disableInstance;
-    }
+class Model {
+  constructor({ table, options = {} }) {
+    this.table = table;
+    this.options = options;
+  }
 
-    async columns() {
-      let columns = __columns[this.table];
-      if (!columns) {
-        const list = await this.ctx.db.query(`show columns from ${this.ctx.db.format('??', this.table)}`);
-        columns = __columns[this.table] = {};
-        for (const item of list) {
-          columns[item.Field] = item;
-        }
-      }
-      return columns;
-    }
+  get disableDeleted() {
+    return this.options.disableDeleted === undefined
+      ? this.app.config.model.disableDeleted
+      : this.options.disableDeleted;
+  }
 
-    async prepareData(item) {
-      // columns
-      const columns = await this.columns();
-      // data
-      const data = {};
-      for (const column in columns) {
-        if (item[column] !== undefined) {
-          data[column] = item[column];
-        }
-      }
-      return data;
-    }
+  get disableInstance() {
+    return this.options.disableInstance === undefined
+      ? this.app.config.model.disableInstance
+      : this.options.disableInstance;
+  }
 
-    _rowCheck(row) {
-      if ((!this.table || !this.disableInstance) && row.iid === undefined) {
-        row.iid = this.ctx.instance.id;
-      }
-      if (this.table && !this.disableDeleted && row.deleted === undefined) {
-        row.deleted = 0;
+  async columns(tableName) {
+    tableName = tableName || this.table;
+    let columns = __columns[tableName];
+    if (!columns) {
+      const list = await this.ctx.db.query(`show columns from ${this.ctx.db.format('??', tableName)}`);
+      columns = __columns[tableName] = {};
+      for (const item of list) {
+        columns[item.Field] = item;
       }
     }
+    return columns;
+  }
 
-    _insertRowsCheck(rows) {
-      if (!Array.isArray(rows)) return this._rowCheck(rows);
-      for (const row of rows) {
-        this._rowCheck(row);
+  columnsClear(tableName) {
+    tableName = tableName || this.table;
+    const exists = __columns[tableName];
+    delete __columns[tableName];
+    return exists;
+  }
+
+  columnsClearAll() {
+    const exists = Object.keys(__columns).length > 0;
+    __columns = {};
+    return exists;
+  }
+
+  async prepareData(item) {
+    // columns
+    const columns = await this.columns();
+    // data
+    const data = {};
+    for (const columnName in columns) {
+      if (item[columnName] !== undefined) {
+        data[columnName] = item[columnName];
       }
+    }
+    return data;
+  }
+
+  async default(data) {
+    data = data || {};
+    // columns
+    const columns = await this.columns();
+    for (const columnName in columns) {
+      const column = columns[columnName];
+      data[columnName] = this._coerceTypeOfDefault(column);
+    }
+    return data;
+  }
+
+  _coerceTypeOfDefault(column) {
+    // type
+    let type = column.Type;
+    const pos = type.indexOf('(');
+    if (pos > -1) type = type.substring(0, pos);
+    // default value
+    const value = column.Default;
+    // coerce
+    if (value === null) return value;
+    if (['timestamp'].includes(type) && value === 'CURRENT_TIMESTAMP') return new Date();
+    if (['bit', 'bool'].includes(type)) return Boolean(value);
+    if (['float', 'double'].includes(type)) return Number(value);
+    if (['tinyint', 'smallint', 'mediumint', 'int', 'bigint'].includes(type)) return Number(value);
+    // others
+    return value;
+  }
+
+  async create(data, ...args) {
+    const data2 = await this.prepareData(data);
+    const res = await this.insert(data2, ...args);
+    return res.insertId;
+  }
+
+  async write(data, ...args) {
+    const data2 = await this.prepareData(data);
+    return await this.update(data2, ...args);
+  }
+
+  _rowCheck(row) {
+    if ((!this.table || !this.disableInstance) && row.iid === undefined) {
+      row.iid = this.ctx.instance.id;
+    }
+    if (this.table && !this.disableDeleted && row.deleted === undefined) {
+      row.deleted = 0;
     }
   }
 
-  [
-    'literals',
-    'escape',
-    'escapeId',
-    'format',
-    'query',
-    'queryOne',
-    '_query',
-    '_where',
-    '_selectColumns',
-    '_limit',
-  ].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        if (is.function(this.ctx.db[method])) {
-          return function () {
-            return this.ctx.db[method].apply(this.ctx.db, arguments);
-          };
-        }
-        // property
-        return this.ctx.db[method];
-      },
-    });
-  });
+  _insertRowsCheck(rows) {
+    if (!Array.isArray(rows)) return this._rowCheck(rows);
+    for (const row of rows) {
+      this._rowCheck(row);
+    }
+  }
+}
 
-  ['insert'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
+[
+  'literals', //
+  'escape',
+  'escapeId',
+  'format',
+  '_formatValue',
+  '_formatWhere',
+  '_where',
+  '_orders',
+  'raw',
+  'query',
+  'queryOne',
+  '_query',
+  '_selectColumns',
+  '_limit',
+].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      if (is.function(this.ctx.db[method])) {
         return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          this._insertRowsCheck(args[1]);
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['update'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          if (args[2] && args[2].where) {
-            this._rowCheck(args[2].where);
-          }
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['delete'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          args[1] = args[1] || {};
-          this._rowCheck(args[1]);
-          if (this.table && !this.disableDeleted) {
-            const sql = this.ctx.db.format('UPDATE ?? SET deleted=1 ', [args[0]]) + this.ctx.db._where(args[1]);
-            return this.ctx.db.query(sql);
-          }
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['count'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          args[1] = args[1] || {};
-          this._rowCheck(args[1]);
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['get'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          args[1] = args[1] || {};
-          // if (args[1].id) {
-          //   return this.ctx.db[method].apply(this.ctx.db, args);
-          // }
-          this._rowCheck(args[1]);
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['select'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const args = [];
-          if (this.table) args.push(this.table);
-          for (const arg of arguments) args.push(arg);
-          args[1] = args[1] || {};
-          args[1].where = args[1].where || {};
-          this._rowCheck(args[1].where);
-          return this.ctx.db[method].apply(this.ctx.db, args);
-        };
-      },
-    });
-  });
-
-  ['_format'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          return _formatValue(this.ctx.db, arguments[0]);
-        };
-      },
-    });
-  });
-
-  ['_orders'].forEach(method => {
-    Object.defineProperty(Model.prototype, method, {
-      get() {
-        return function () {
-          const value = arguments[0];
-          if (!value || !Array.isArray(value) || value.length === 0) return null;
           return this.ctx.db[method].apply(this.ctx.db, arguments);
         };
-      },
-    });
+      }
+      // property
+      return this.ctx.db[method];
+    },
   });
+});
 
-  // replace _where
-  RDSClient.prototype._where = function (where) {
-    const wheres = _formatWhere(this, where);
-    if (!wheres) return '';
-    return ` WHERE (${wheres})`;
-  };
+['insert'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function (...args) {
+        if (args.length === 0) {
+          args.push({});
+        }
+        if (this.table) {
+          args.unshift(this.table);
+        }
+        this._insertRowsCheck(args[1]);
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-  return Model;
-};
+['update'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function () {
+        const args = [];
+        if (this.table) args.push(this.table);
+        for (const arg of arguments) args.push(arg);
+        if (args[2] && args[2].where) {
+          this._rowCheck(args[2].where);
+        }
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-function _formatOrAnd(db, ors, orAnd) {
-  const wheres = [];
-  for (const or of ors) {
-    const _where = _formatWhere(db, or);
-    if (_where) {
-      wheres.push(_where);
-    }
-  }
-  if (wheres.length === 0) return '';
-  return wheres.join(` ${orAnd} `);
-}
+['delete'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function () {
+        const args = [];
+        if (this.table) args.push(this.table);
+        for (const arg of arguments) args.push(arg);
+        args[1] = args[1] || {};
+        this._rowCheck(args[1]);
+        if (this.table && !this.disableDeleted) {
+          const sql = this.ctx.db.format('UPDATE ?? SET deleted=1 ', [args[0]]) + this.ctx.db._where(args[1]);
+          return this.ctx.db.query(sql);
+        }
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-function _formatWhere(db, where) {
-  if (!where) {
-    return '';
-  }
+['count'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function () {
+        const args = [];
+        if (this.table) args.push(this.table);
+        for (const arg of arguments) args.push(arg);
+        args[1] = args[1] || {};
+        this._rowCheck(args[1]);
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-  const wheres = [];
-  for (const key in where) {
-    const value = where[key];
-    // check key
-    if (key.indexOf(__whereOrPlaceholder) > -1) {
-      // or
-      const _where = _formatOrAnd(db, value, 'OR');
-      if (_where) {
-        wheres.push(`(${_where})`);
-      }
-      continue;
-    }
-    if (key.indexOf(__whereAndPlaceholder) > -1) {
-      // and
-      const _where = _formatOrAnd(db, value, 'AND');
-      if (_where) {
-        wheres.push(`(${_where})`);
-      }
-      continue;
-    }
-    // check value
-    if (Array.isArray(value)) {
-      wheres.push(db.format('?? IN (?)', [key, value]));
-    } else if (value === null || value === undefined) {
-      wheres.push(db.format('?? IS ?', [key, value]));
-    } else if (value && !(value instanceof Date) && typeof value === 'object') {
-      // op
-      let op = value.op || '='; // default is =
-      op = op.indexOf('like') > -1 ? 'LIKE' : op;
-      // op: notNull
-      if (op === 'notNull') {
-        wheres.push(db.format('?? IS NOT null', [key]));
-      } else {
-        wheres.push(`${db.format('??', key)} ${_safeOp(op)} ${_formatValue(db, value)}`);
-      }
-    } else {
-      wheres.push(db.format('?? = ?', [key, value]));
-    }
-  }
-  if (wheres.length === 0) return '';
-  return wheres.join(' AND ');
-}
+['get'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function () {
+        // console.log(this.constructor.name, arguments);
+        const args = [];
+        if (this.table) args.push(this.table);
+        for (const arg of arguments) args.push(arg);
+        args[1] = args[1] || {};
+        // if (args[1].id) {
+        //   return this.ctx.db[method].apply(this.ctx.db, args);
+        // }
+        this._rowCheck(args[1]);
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-function _formatValue(db, value) {
-  if (typeof value !== 'object' || value instanceof Date) return db.format('?', value);
-  let val;
-  if (value.type === 'Date') {
-    val = db.format('?', moment(value.val).toDate());
-  } else {
-    val = db.format('?', value.val);
-  }
-  // like
-  const val2 = val.substr(1, val.length - 2);
-  if (value.op === 'like') return `'%${val2}%'`;
-  if (value.op === 'likeLeft') return `'%${val2}'`;
-  if (value.op === 'likeRight') return `'${val2}%'`;
-  // in
-  if (value.op === 'in' || value.op === 'notIn') {
-    const arr = typeof value.val === 'string' ? value.val.split(',') : value.val;
-    return `(${db.format('?', [arr])})`;
-  }
-  // others
-  return val;
-}
+['select'].forEach(method => {
+  Object.defineProperty(Model.prototype, method, {
+    get() {
+      return function () {
+        const args = [];
+        if (this.table) args.push(this.table);
+        for (const arg of arguments) args.push(arg);
+        args[1] = args[1] || {};
+        args[1].where = args[1].where || {};
+        this._rowCheck(args[1].where);
+        return this.ctx.db[method].apply(this.ctx.db, args);
+      };
+    },
+  });
+});
 
-function _safeOp(op) {
-  if (op === 'notIn') return 'not in';
-  return op.replace(/[\\\.*#%'"`;, ]/g, '');
-}
+module.exports = Model;

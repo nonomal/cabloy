@@ -1,7 +1,7 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 224:
+/***/ 5224:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -12,7 +12,51 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 511:
+/***/ 9389:
+/***/ ((module) => {
+
+module.exports = ctx => {
+  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends ctx.app.meta.CliBase(ctx) {
+    async execute({ user }) {
+      const { argv } = this.context;
+      // super
+      await super.execute({ user });
+      // module name/info
+      const moduleName = argv.module;
+      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
+      // check if exists
+      const _module = this.helper.findModule(moduleName);
+      if (!_module) {
+        throw new Error(`module does not exist: ${moduleName}`);
+      }
+      // target dir
+      const targetDir = await this.helper.ensureDir(_module.root);
+      // appName
+      let appName = argv.appName;
+      appName = appName.replace(appName[0], appName[0].toLowerCase());
+      argv.appName = appName;
+      argv.appNameCapitalize = appName.replace(appName[0], appName[0].toUpperCase());
+      argv.appKey = `app${argv.appNameCapitalize}`;
+      // render
+      await this.template.renderBoilerplateAndSnippets({
+        targetDir,
+        moduleName: moduleInfo.relativeName,
+        snippetsPath: 'create/app/snippets',
+        boilerplatePath: 'create/app/boilerplate',
+      });
+      // reload
+      ctx.app.meta.reload.now();
+    }
+  }
+
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 5511:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -50,7 +94,45 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 199:
+/***/ 5981:
+/***/ ((module) => {
+
+module.exports = ctx => {
+  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends ctx.app.meta.CliBase(ctx) {
+    async execute({ user }) {
+      const { argv } = this.context;
+      // super
+      await super.execute({ user });
+      // module name/info
+      const moduleName = argv.module;
+      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
+      // check if exists
+      const _module = this.helper.findModule(moduleName);
+      if (!_module) {
+        throw new Error(`module does not exist: ${moduleName}`);
+      }
+      // target dir
+      const targetDir = await this.helper.ensureDir(_module.root);
+      // render
+      await this.template.renderBoilerplateAndSnippets({
+        targetDir,
+        moduleName: moduleInfo.relativeName,
+        snippetsPath: 'create/atomAction/snippets',
+        boilerplatePath: 'create/atomAction/boilerplate',
+      });
+      // reload
+      ctx.app.meta.reload.now();
+    }
+  }
+
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 2199:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -88,11 +170,11 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 554:
+/***/ 1554:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const fs = __webpack_require__(147);
-const path = __webpack_require__(17);
+const fs = __webpack_require__(7147);
+const path = __webpack_require__(1017);
 
 module.exports = ctx => {
   const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
@@ -152,87 +234,39 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 863:
-/***/ ((module) => {
-
-module.exports = ctx => {
-  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
-  class Cli extends ctx.app.meta.CliBase(ctx) {
-    async execute({ user }) {
-      const { argv } = this.context;
-      // super
-      await super.execute({ user });
-      // module name/info
-      const moduleName = argv.module;
-      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
-      // check if exists
-      const _module = this.helper.findModule(moduleName);
-      if (!_module) {
-        throw new Error(`module does not exist: ${moduleName}`);
-      }
-      // target dir
-      const targetDir = await this.helper.ensureDir(_module.root);
-      // render
-      await this.template.renderBoilerplateAndSnippets({
-        targetDir,
-        moduleName: moduleInfo.relativeName,
-        snippetsPath: 'create/page/snippets',
-        boilerplatePath: 'create/page/boilerplate',
-      });
-      // need not reload
-      // ctx.app.meta.reload.now();
-    }
-  }
-
-  return Cli;
-};
-
-
-/***/ }),
-
-/***/ 232:
-/***/ ((module) => {
-
-module.exports = ctx => {
-  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
-  class Cli extends ctx.app.meta.CliBase(ctx) {
-    async execute({ user }) {
-      const { argv } = this.context;
-      // super
-      await super.execute({ user });
-      // module name/info
-      const moduleName = argv.module;
-      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
-      // check if exists
-      const _module = this.helper.findModule(moduleName);
-      if (!_module) {
-        throw new Error(`module does not exist: ${moduleName}`);
-      }
-      // target dir
-      const targetDir = await this.helper.ensureDir(_module.root);
-      // render
-      await this.template.renderBoilerplateAndSnippets({
-        targetDir,
-        moduleName: moduleInfo.relativeName,
-        snippetsPath: 'create/pagex/snippets',
-        boilerplatePath: 'create/pagex/boilerplate',
-      });
-      // need not reload
-      // ctx.app.meta.reload.now();
-    }
-  }
-
-  return Cli;
-};
-
-
-/***/ }),
-
-/***/ 29:
+/***/ 5863:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const fs = __webpack_require__(147);
-const path = __webpack_require__(17);
+const CliCreatePage = __webpack_require__(8874);
+
+module.exports = ctx => {
+  // const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends CliCreatePage(ctx, 'page') {}
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 1232:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const CliCreatePage = __webpack_require__(8874);
+
+module.exports = ctx => {
+  // const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends CliCreatePage(ctx, 'pagex') {}
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 6029:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const fs = __webpack_require__(7147);
+const path = __webpack_require__(1017);
 
 module.exports = ctx => {
   const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
@@ -273,7 +307,7 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 66:
+/***/ 3066:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -372,18 +406,118 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 467:
+/***/ 221:
+/***/ ((module) => {
+
+module.exports = ctx => {
+  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends ctx.app.meta.CliBase(ctx) {
+    async execute({ user }) {
+      const { argv } = this.context;
+      // super
+      await super.execute({ user });
+      // module name/info
+      const moduleName = argv.module;
+      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
+      // check if exists
+      const _module = this.helper.findModule(moduleName);
+      if (!_module) {
+        throw new Error(`module does not exist: ${moduleName}`);
+      }
+      // target dir
+      const targetDir = await this.helper.ensureDir(_module.root);
+      // componentName
+      // const componentName=argv.componentName;
+      // render
+      await this.template.renderBoilerplateAndSnippets({
+        targetDir,
+        moduleName: moduleInfo.relativeName,
+        snippetsPath: 'front/renderTableCell/snippets',
+        boilerplatePath: 'front/renderTableCell/boilerplate',
+      });
+      // need not reload
+      // ctx.app.meta.reload.now();
+    }
+  }
+
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 5354:
+/***/ ((module) => {
+
+module.exports = ctx => {
+  class Cli extends ctx.app.meta.CliBase(ctx) {
+    async execute({ user }) {
+      const { argv } = this.context;
+      // super
+      await super.execute({ user });
+      // prepare entities
+      const entities = await this.__prepareEntities();
+      const total = entities.length;
+      for (let index = 0; index < total; index++) {
+        const entity = entities[index];
+        // log
+        await this.console.log({
+          progressNo: 0,
+          total,
+          progress: index,
+          text: entity.info.relativeName,
+        });
+        // git commit
+        const message = argv.message;
+        await this.helper.gitCommit({
+          cwd: entity.root,
+          message,
+        });
+      }
+    }
+
+    async __prepareEntities() {
+      // load all entities
+      const entityNames = ctx.bean.util.getProperty(this.cabloyConfig.get(), 'cli.commands.:git:commit.entities');
+      // prepare
+      const entities = [];
+      for (const entityName of entityNames) {
+        // try suite
+        let entity = this.helper.findSuite(entityName);
+        if (!entity) {
+          // try module
+          entity = this.helper.findModule(entityName);
+        }
+        if (!entity) {
+          // not throw error
+          const text = `entity does not exist: ${entityName}`;
+          await this.console.log({ text });
+        } else {
+          entities.push(entity);
+        }
+      }
+      return entities;
+    }
+  }
+
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 9467:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const path = __webpack_require__(17);
-const require3 = __webpack_require__(638);
+const path = __webpack_require__(1017);
+const require3 = __webpack_require__(5638);
 const fse = require3('fs-extra');
-const AdmZip = require3('adm-zip');
+const JSZip = require3('jszip');
 const shajs = require3('sha.js');
 const semver = require3('semver');
 const utility = require3('utility');
 const eggBornUtils = require3('egg-born-utils');
-const CliStoreBase = __webpack_require__(210);
+const CliStoreBase = __webpack_require__(7210);
 
 module.exports = ctx => {
   class Cli extends CliStoreBase(ctx) {
@@ -459,7 +593,7 @@ module.exports = ctx => {
       // handleScripts
       await this._handleScripts({ entityMeta: moduleMeta, entityConfig });
       // submitted
-      return { code: 2000, args: [moduleMeta.package.version] };
+      return { code: 2002, args: [moduleMeta.package.version] };
     }
 
     async _publishSuite({ suiteName, entityConfig, entityHash, entityStatus, needOfficial, needTrial }) {
@@ -511,7 +645,7 @@ module.exports = ctx => {
       // handleScripts
       await this._handleScripts({ entityMeta: suiteMeta, entityConfig });
       // submitted
-      return { code: 2000, args: [suiteMeta.package.version] };
+      return { code: 2002, args: [suiteMeta.package.version] };
     }
 
     async _uploadModuleIsolate({ moduleMeta, needOfficial, needTrial }) {
@@ -569,17 +703,18 @@ module.exports = ctx => {
     }
 
     async _zipSuiteAll_zip({ suiteMeta, modulesMeta, type }) {
-      const zip = new AdmZip();
-      zip.addFile('default', suiteMeta.zipSuite.buffer);
+      const zip = new JSZip();
+      zip.file('default', suiteMeta.zipSuite.buffer);
       for (const moduleMeta of modulesMeta) {
         const buffer = type === 'official' ? moduleMeta.zipOfficial.buffer : moduleMeta.zipTrial.buffer;
-        zip.addFile(moduleMeta.name, buffer);
+        zip.file(moduleMeta.name, buffer);
       }
-      const buffer = await zip.toBufferPromise();
+      const buffer = await zip.generateAsync({ type: 'uint8array' });
       return { buffer };
     }
 
     async _zipSuite({ modulesMeta, suiteMeta, suiteHash, needLicense }) {
+      const { argv } = this.context;
       let zipSuite;
       // check modulesMeta
       let changed = modulesMeta.some(moduleMeta => moduleMeta.changed);
@@ -593,7 +728,7 @@ module.exports = ctx => {
         });
         changed = zipSuite.hash.hash !== suiteHash.hash;
       }
-      if (changed) {
+      if (argv.force || changed) {
         suiteMeta.changed = true;
         // bump
         // if (suiteHash.version && !semver.gt(suiteMeta.package.version, suiteHash.version)) {
@@ -619,6 +754,7 @@ module.exports = ctx => {
     }
 
     async _zipSuiteModule({ moduleMeta, moduleHash, needTrial, needLicense }) {
+      const { argv } = this.context;
       // log
       await this.console.log(`===> module: ${moduleMeta.name}`);
       // zip officialTemp
@@ -630,7 +766,7 @@ module.exports = ctx => {
         needLicense,
       });
       // check hash
-      if (zipOfficialTemp.hash.hash !== moduleHash.hash) {
+      if (argv.force || zipOfficialTemp.hash.hash !== moduleHash.hash) {
         moduleMeta.changed = true;
         // build:all
         await this.helper.spawnCmd({
@@ -693,11 +829,8 @@ module.exports = ctx => {
       }
       files.sort();
       // zip
-      const zip = new AdmZip();
+      const zip = new JSZip();
       for (const file of files) {
-        //
-        const dirName = path.dirname(file);
-        const fileName = path.basename(file);
         //
         let fileLocal;
         if (file === 'LICENSE' && licenseParent) {
@@ -705,10 +838,22 @@ module.exports = ctx => {
         } else {
           fileLocal = path.join(pathRoot, file);
         }
+        // path
+        const dirName = path.dirname(file);
+        if (dirName) {
+          const parts = dirName.split('/');
+          let dirPath = '';
+          for (let i = 0; i < parts.length; i++) {
+            dirPath = path.join(dirPath, parts[i]);
+            const stats = fse.statSync(path.join(pathRoot, dirPath));
+            zip.file(dirPath, null, { dir: true, date: stats.mtime });
+          }
+        }
         //
-        zip.addLocalFile(fileLocal, dirName, fileName);
+        const stats = fse.statSync(fileLocal);
+        zip.file(file, fse.readFileSync(fileLocal), { date: stats.mtime });
       }
-      const buffer = await zip.toBufferPromise();
+      const buffer = await zip.generateAsync({ type: 'uint8array' });
       // hash
       const hash = needHash ? shajs('sha256').update(buffer).digest('hex') : undefined;
       // ok
@@ -751,29 +896,9 @@ module.exports = ctx => {
     }
 
     async _handleScripts_gitCommit({ entityMeta }) {
-      // git add .
-      await this.helper.spawnExe({
-        cmd: 'git',
-        args: ['add', '.'],
-        options: {
-          cwd: entityMeta.root,
-        },
-      });
-      // git commit
-      await this.helper.spawnExe({
-        cmd: 'git',
-        args: ['commit', '-m', `chore: version ${entityMeta.package.version}`],
-        options: {
-          cwd: entityMeta.root,
-        },
-      });
-      // git push
-      await this.helper.spawnExe({
-        cmd: 'git',
-        args: ['push'],
-        options: {
-          cwd: entityMeta.root,
-        },
+      await this.helper.gitCommit({
+        cwd: entityMeta.root,
+        message: `chore: version ${entityMeta.package.version}`,
       });
     }
 
@@ -796,18 +921,18 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 937:
+/***/ 5937:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const path = __webpack_require__(17);
-const os = __webpack_require__(37);
-const require3 = __webpack_require__(638);
+const path = __webpack_require__(1017);
+const os = __webpack_require__(2037);
+const require3 = __webpack_require__(5638);
 const eggBornUtils = require3('egg-born-utils');
 const AdmZip = require3('adm-zip');
 const semver = require3('semver');
 const fse = require3('fs-extra');
 const rimraf = require3('mz-modules/rimraf');
-const CliStoreBase = __webpack_require__(210);
+const CliStoreBase = __webpack_require__(7210);
 
 module.exports = ctx => {
   const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
@@ -946,7 +1071,7 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 971:
+/***/ 2971:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -979,7 +1104,7 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 65:
+/***/ 2065:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -1009,7 +1134,7 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 301:
+/***/ 9301:
 /***/ ((module) => {
 
 module.exports = ctx => {
@@ -1048,11 +1173,11 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 544:
+/***/ 6544:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const path = __webpack_require__(17);
-const require3 = __webpack_require__(638);
+const path = __webpack_require__(1017);
+const require3 = __webpack_require__(5638);
 const babel = require3('@babel/core');
 const UglifyJS = require3('uglify-js');
 const fse = require3('fs-extra');
@@ -1107,11 +1232,11 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 508:
+/***/ 9508:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const path = __webpack_require__(17);
-const require3 = __webpack_require__(638);
+const path = __webpack_require__(1017);
+const require3 = __webpack_require__(5638);
 const fse = require3('fs-extra');
 const eggBornUtils = require3('egg-born-utils');
 const bb = require3('bluebird');
@@ -1241,7 +1366,7 @@ ${symbols.join('\n')}
 
 /***/ }),
 
-/***/ 899:
+/***/ 6899:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1259,24 +1384,28 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 187:
+/***/ 5187:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const versionManager = __webpack_require__(899);
-const cliDefaultList = __webpack_require__(66);
-const cliTokenAdd = __webpack_require__(971);
-const cliTokenDelete = __webpack_require__(65);
-const cliTokenList = __webpack_require__(301);
-const cliToolsBabel = __webpack_require__(544);
-const cliToolsIcons = __webpack_require__(508);
-const cliCreateSuite = __webpack_require__(29);
-const cliCreateModule = __webpack_require__(554);
-const cliCreateAtom = __webpack_require__(511);
-const cliCreateController = __webpack_require__(199);
-const cliCreatePage = __webpack_require__(863);
-const cliCreatePagex = __webpack_require__(232);
-const cliStoreSync = __webpack_require__(937);
-const cliStorePublish = __webpack_require__(467);
+const versionManager = __webpack_require__(6899);
+const cliDefaultList = __webpack_require__(3066);
+const cliTokenAdd = __webpack_require__(2971);
+const cliTokenDelete = __webpack_require__(2065);
+const cliTokenList = __webpack_require__(9301);
+const cliToolsBabel = __webpack_require__(6544);
+const cliToolsIcons = __webpack_require__(9508);
+const cliCreateSuite = __webpack_require__(6029);
+const cliCreateModule = __webpack_require__(1554);
+const cliCreateApp = __webpack_require__(9389);
+const cliCreateAtom = __webpack_require__(5511);
+const cliCreateAtomAction = __webpack_require__(5981);
+const cliCreateController = __webpack_require__(2199);
+const cliCreatePage = __webpack_require__(5863);
+const cliCreatePagex = __webpack_require__(1232);
+const cliFrontRenderTableCell = __webpack_require__(221);
+const cliStoreSync = __webpack_require__(5937);
+const cliStorePublish = __webpack_require__(9467);
+const cliGitCommit = __webpack_require__(5354);
 
 module.exports = app => {
   const beans = {
@@ -1318,9 +1447,17 @@ module.exports = app => {
       mode: 'ctx',
       bean: cliCreateModule,
     },
+    'cli.create.app': {
+      mode: 'ctx',
+      bean: cliCreateApp,
+    },
     'cli.create.atom': {
       mode: 'ctx',
       bean: cliCreateAtom,
+    },
+    'cli.create.atomAction': {
+      mode: 'ctx',
+      bean: cliCreateAtomAction,
     },
     'cli.create.controller': {
       mode: 'ctx',
@@ -1334,6 +1471,10 @@ module.exports = app => {
       mode: 'ctx',
       bean: cliCreatePagex,
     },
+    'cli.front.renderTableCell': {
+      mode: 'ctx',
+      bean: cliFrontRenderTableCell,
+    },
     'cli.store.sync': {
       mode: 'ctx',
       bean: cliStoreSync,
@@ -1342,6 +1483,10 @@ module.exports = app => {
       mode: 'ctx',
       bean: cliStorePublish,
     },
+    'cli.git.commit': {
+      mode: 'ctx',
+      bean: cliGitCommit,
+    },
   };
   return beans;
 };
@@ -1349,13 +1494,72 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 210:
+/***/ 8874:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const require3 = __webpack_require__(638);
+const path = __webpack_require__(1017);
+
+module.exports = (ctx, pageMode) => {
+  const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
+  class Cli extends ctx.app.meta.CliBase(ctx) {
+    async execute({ user }) {
+      const { argv } = this.context;
+      // super
+      await super.execute({ user });
+      // module name/info
+      const moduleName = argv.module;
+      argv.moduleInfo = this.helper.parseModuleInfo(moduleName);
+      // check if exists
+      const _module = this.helper.findModule(moduleName);
+      if (!_module) {
+        throw new Error(`module does not exist: ${moduleName}`);
+      }
+      // target dir
+      const targetDir = await this.helper.ensureDir(_module.root);
+      // pageName
+      const pageName = argv.pageName;
+      // pageName2
+      const parts = pageName.split('/');
+      const pageName2 = parts[parts.length - 1];
+      argv.pageName2 = pageName2;
+      // directory
+      let pageDir = path.join(targetDir, 'front/src/pages');
+      if (parts.length > 1) {
+        pageDir = path.join(pageDir, parts.slice(0, parts.length - 1).join('/'));
+      }
+      await this.helper.ensureDir(pageDir);
+      // render snippets
+      await this.template.renderBoilerplateAndSnippets({
+        targetDir,
+        moduleName: moduleInfo.relativeName,
+        snippetsPath: `create/${pageMode}/snippets`,
+        boilerplatePath: null,
+      });
+      // render boilerplate
+      await this.template.renderBoilerplateAndSnippets({
+        targetDir: pageDir,
+        moduleName: moduleInfo.relativeName,
+        snippetsPath: null,
+        boilerplatePath: `create/${pageMode}/boilerplate`,
+      });
+      // need not reload
+      // ctx.app.meta.reload.now();
+    }
+  }
+
+  return Cli;
+};
+
+
+/***/ }),
+
+/***/ 7210:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const require3 = __webpack_require__(5638);
 const eggBornUtils = require3('egg-born-utils');
 
-// const __storeTokenHost = 'https://admin.cabloy.com';
+// const __storeTokenHost = 'https://portal.cabloy.com';
 // const __storeTokenHost = 'http://localhost:9192';
 
 module.exports = ctx => {
@@ -1539,12 +1743,13 @@ module.exports = ctx => {
     }
 
     _logHelperDocs({ welcomes, user }) {
-      if (this.cabloyConfig.cli && this.cabloyConfig.cli.helper === false) {
+      const configHelper = ctx.bean.util.getProperty(this.cabloyConfig.get(), 'cli.helper');
+      if (configHelper === false) {
         return;
       }
       const url = this._getCabloyDocsURL({ slug: 'cli-store', user });
       const text = this.helper.chalk.keyword('cyan')(url);
-      welcomes.push(`cli store docs: ${text}`);
+      welcomes.push(`${ctx.text('CliStoreDocs')}: ${text}`);
     }
   }
   return CliStoreBase;
@@ -1553,7 +1758,52 @@ module.exports = ctx => {
 
 /***/ }),
 
-/***/ 184:
+/***/ 8468:
+/***/ ((module) => {
+
+module.exports = app => {
+  return {
+    bean: 'create.app',
+    resource: {
+      atomStaticKey: 'cliCreate',
+    },
+    info: {
+      version: '4.0.0',
+      title: 'Cli: Create App',
+      usage: 'npm run cli :create:app appName -- [--module=]',
+    },
+    options: {
+      module: {
+        description: 'module name',
+        type: 'string',
+      },
+    },
+    groups: {
+      default: {
+        questions: {
+          appName: {
+            type: 'input',
+            message: 'appName',
+            initial: {
+              expression: 'context.argv._[0]',
+            },
+            required: true,
+          },
+          module: {
+            type: 'input',
+            message: 'module name',
+            required: true,
+          },
+        },
+      },
+    },
+  };
+};
+
+
+/***/ }),
+
+/***/ 4184:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1619,7 +1869,93 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 222:
+/***/ 6798:
+/***/ ((module) => {
+
+module.exports = app => {
+  return {
+    bean: 'create.atomAction',
+    resource: {
+      atomStaticKey: 'cliCreate',
+    },
+    info: {
+      version: '4.0.0',
+      title: 'Cli: Create Atom Action',
+      usage: 'npm run cli :create:atomAction actionName -- [--actionCode=] [--module=] [--atomClassName=]',
+    },
+    options: {
+      actionCode: {
+        description: 'action code',
+        type: 'number',
+      },
+      module: {
+        description: 'module name',
+        type: 'string',
+      },
+      atomClassName: {
+        description: 'atomClass name',
+        type: 'string',
+      },
+    },
+    groups: {
+      default: {
+        questions: {
+          actionName: {
+            type: 'input',
+            message: 'actionName',
+            initial: {
+              expression: 'context.argv._[0]',
+            },
+            required: true,
+          },
+          actionCode: {
+            type: 'input',
+            message: 'actionCode',
+            default: 101,
+            required: true,
+          },
+          module: {
+            type: 'input',
+            message: 'moduleName',
+            required: true,
+          },
+          atomClassName: {
+            type: 'input',
+            message: 'atomClassName',
+            required: true,
+          },
+        },
+      },
+      actionInfoAuto: {
+        questions: {
+          actionNameCapitalize: {
+            type: 'input',
+            message: 'actionNameCapitalize',
+            initial: {
+              expression:
+                'context.argv.actionName.replace(context.argv.actionName[0], context.argv.actionName[0].toUpperCase())',
+            },
+            silent: true,
+          },
+          atomClassNameCapitalize: {
+            type: 'input',
+            message: 'atomClassNameCapitalize',
+            initial: {
+              expression:
+                'context.argv.atomClassName.replace(context.argv.atomClassName[0], context.argv.atomClassName[0].toUpperCase())',
+            },
+            silent: true,
+          },
+        },
+      },
+    },
+  };
+};
+
+
+/***/ }),
+
+/***/ 2222:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1685,7 +2021,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 793:
+/***/ 8793:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1726,10 +2062,6 @@ module.exports = app => {
               { name: 'module-icon', message: 'cabloy icon module template' },
             ],
           },
-          suite: {
-            type: 'input',
-            message: 'suite name',
-          },
         },
       },
       moduleInfo: {
@@ -1741,6 +2073,10 @@ module.exports = app => {
               expression: 'context.argv._[0]',
             },
             required: true,
+          },
+          suite: {
+            type: 'input',
+            message: 'suite name',
           },
           description: {
             type: 'input',
@@ -1798,7 +2134,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 111:
+/***/ 2111:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1843,7 +2179,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 586:
+/***/ 1586:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1888,7 +2224,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 687:
+/***/ 3687:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1931,7 +2267,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 666:
+/***/ 7017:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1961,7 +2297,87 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 730:
+/***/ 3227:
+/***/ ((module) => {
+
+module.exports = app => {
+  return {
+    bean: 'front.renderTableCell',
+    resource: {
+      atomStaticKey: 'cliCreate',
+    },
+    info: {
+      version: '4.0.0',
+      title: 'Cli: Render Table Cell',
+      usage: 'npm run cli :front:renderTableCell componentName -- [--module=]',
+    },
+    options: {
+      module: {
+        description: 'module name',
+        type: 'string',
+      },
+    },
+    groups: {
+      default: {
+        questions: {
+          componentName: {
+            type: 'input',
+            message: 'componentName',
+            initial: {
+              expression: 'context.argv._[0]',
+            },
+            required: true,
+          },
+          module: {
+            type: 'input',
+            message: 'module name',
+            required: true,
+          },
+        },
+      },
+    },
+  };
+};
+
+
+/***/ }),
+
+/***/ 8289:
+/***/ ((module) => {
+
+module.exports = app => {
+  return {
+    bean: 'git.commit',
+    resource: {
+      atomStaticKey: 'cliGit',
+    },
+    info: {
+      version: '4.0.0',
+      title: 'Cli: Git Commit',
+      usage: 'npm run cli :git:commit message',
+    },
+    options: {},
+    groups: {
+      default: {
+        questions: {
+          message: {
+            type: 'input',
+            message: 'message',
+            initial: {
+              expression: 'context.argv._[0]',
+            },
+            required: true,
+          },
+        },
+      },
+    },
+  };
+};
+
+
+/***/ }),
+
+/***/ 9730:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -1973,9 +2389,14 @@ module.exports = app => {
     info: {
       version: '4.0.0',
       title: 'Cli: Store: Publish',
-      usage: 'npm run cli :store:publish [entity1] [entity2]',
+      usage: 'npm run cli :store:publish [entity1] [entity2] -- [--force=]',
     },
-    // options: null,
+    options: {
+      force: {
+        description: 'force to publish',
+        type: 'boolean',
+      },
+    },
     groups: {
       default: {
         description: 'CliAuthOpenTokenInfoStorePublish',
@@ -1999,7 +2420,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 609:
+/***/ 5609:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2037,7 +2458,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 552:
+/***/ 1552:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2097,7 +2518,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 443:
+/***/ 7443:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2154,7 +2575,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 807:
+/***/ 4807:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2176,7 +2597,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 571:
+/***/ 7571:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2198,23 +2619,27 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 407:
+/***/ 4407:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const defaultList = __webpack_require__(666);
-const tokenAdd = __webpack_require__(552);
-const tokenDelete = __webpack_require__(443);
+const defaultList = __webpack_require__(7017);
+const tokenAdd = __webpack_require__(1552);
+const tokenDelete = __webpack_require__(7443);
 const tokenList = __webpack_require__(160);
-const toolsBabel = __webpack_require__(807);
-const toolsIcons = __webpack_require__(571);
-const createSuite = __webpack_require__(687);
-const createModule = __webpack_require__(793);
-const createAtom = __webpack_require__(184);
-const createController = __webpack_require__(222);
-const createPage = __webpack_require__(111);
-const createPagex = __webpack_require__(586);
-const storeSync = __webpack_require__(609);
-const storePublish = __webpack_require__(730);
+const toolsBabel = __webpack_require__(4807);
+const toolsIcons = __webpack_require__(7571);
+const createSuite = __webpack_require__(3687);
+const createModule = __webpack_require__(8793);
+const createApp = __webpack_require__(8468);
+const createAtom = __webpack_require__(4184);
+const createAtomAction = __webpack_require__(6798);
+const createController = __webpack_require__(2222);
+const createPage = __webpack_require__(2111);
+const createPagex = __webpack_require__(1586);
+const renderTableCell = __webpack_require__(3227);
+const storeSync = __webpack_require__(5609);
+const storePublish = __webpack_require__(9730);
+const gitCommit = __webpack_require__(8289);
 
 module.exports = app => {
   const commands = {
@@ -2233,14 +2658,22 @@ module.exports = app => {
     create: {
       suite: createSuite(app),
       module: createModule(app),
+      app: createApp(app),
       atom: createAtom(app),
+      atomAction: createAtomAction(app),
       controller: createController(app),
       page: createPage(app),
       pagex: createPagex(app),
     },
+    front: {
+      renderTableCell: renderTableCell(app),
+    },
     store: {
       sync: storeSync(app),
       publish: storePublish(app),
+    },
+    git: {
+      commit: gitCommit(app),
     },
   };
   return commands;
@@ -2249,7 +2682,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 76:
+/***/ 7076:
 /***/ ((module) => {
 
 // eslint-disable-next-line
@@ -2259,7 +2692,7 @@ module.exports = appInfo => {
   // store
   config.store = {
     token: {
-      host: 'https://admin.cabloy.com',
+      host: 'https://portal.cabloy.com',
     },
     publish: {
       patterns: {
@@ -2287,15 +2720,15 @@ module.exports = appInfo => {
 
 /***/ }),
 
-/***/ 624:
+/***/ 5624:
 /***/ ((module) => {
 
 // error code should start from 1001
 module.exports = {
   1001: 'Not Found',
   // 2000: publish
-  2000: 'Submitted, Version: %s',
   2001: 'No Changes Found',
+  2002: 'Submitted, Version: %s',
   // 3000: sync
   3000: 'Synced, Version: %s',
   3001: 'Not Purchased',
@@ -2306,10 +2739,11 @@ module.exports = {
 
 /***/ }),
 
-/***/ 327:
+/***/ 6327:
 /***/ ((module) => {
 
 module.exports = {
+  CliStoreDocs: 'Cli Store Docs',
   CliAuthOpenTokenInfoStoreSync: 'Open auth token for Cabloy Store sync',
   CliAuthOpenTokenInfoStorePublish: 'Open auth token for Cabloy Store publish',
 };
@@ -2317,11 +2751,12 @@ module.exports = {
 
 /***/ }),
 
-/***/ 72:
+/***/ 3072:
 /***/ ((module) => {
 
 module.exports = {
   Submitted: '已提交',
+  CliStoreDocs: 'Cli商店文档',
   CliAuthOpenTokenInfoStoreSync: '用于Cabloy商店同步的开放认证Token',
   CliAuthOpenTokenInfoStorePublish: '用于Cabloy商店发布的开放认证Token',
   'Specify the module template': '指定模块模版',
@@ -2341,14 +2776,14 @@ module.exports = {
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = {
-  'en-us': __webpack_require__(327),
-  'zh-cn': __webpack_require__(72),
+  'en-us': __webpack_require__(6327),
+  'zh-cn': __webpack_require__(3072),
 };
 
 
 /***/ }),
 
-/***/ 429:
+/***/ 5429:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2409,6 +2844,15 @@ module.exports = app => {
       resourceConfig: null,
       resourceRoles: 'template.system,RoleScopeCliDevelopment',
     },
+    {
+      atomName: 'Cli Git',
+      atomStaticKey: 'cliGit',
+      atomRevision: 0,
+      atomCategoryId: 'a-base:function.Cli',
+      resourceType: 'a-base:function',
+      resourceConfig: null,
+      resourceRoles: 'template.system,RoleScopeCliDevelopment',
+    },
   ];
   // ok
   return resources;
@@ -2417,7 +2861,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 746:
+/***/ 8232:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2428,7 +2872,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 95:
+/***/ 7095:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2439,26 +2883,26 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 421:
+/***/ 9421:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-const config = __webpack_require__(76);
+const config = __webpack_require__(7076);
 const locales = __webpack_require__(25);
-const errors = __webpack_require__(624);
+const errors = __webpack_require__(5624);
 
 module.exports = app => {
   // aops
-  const aops = __webpack_require__(224)(app);
+  const aops = __webpack_require__(5224)(app);
   // beans
-  const beans = __webpack_require__(187)(app);
+  const beans = __webpack_require__(5187)(app);
   // routes
-  const routes = __webpack_require__(825)(app);
+  const routes = __webpack_require__(3825)(app);
   // controllers
-  const controllers = __webpack_require__(95)(app);
+  const controllers = __webpack_require__(7095)(app);
   // services
-  const services = __webpack_require__(214)(app);
+  const services = __webpack_require__(7214)(app);
   // models
-  const models = __webpack_require__(230)(app);
+  const models = __webpack_require__(3230)(app);
   // meta
   const meta = __webpack_require__(458)(app);
 
@@ -2484,11 +2928,11 @@ module.exports = app => {
 
 module.exports = app => {
   // schemas
-  const schemas = __webpack_require__(746)(app);
+  const schemas = __webpack_require__(8232)(app);
   // static
-  const staticResources = __webpack_require__(429)(app);
+  const staticResources = __webpack_require__(5429)(app);
   // cli commands
-  const cliCommands = __webpack_require__(407)(app);
+  const cliCommands = __webpack_require__(4407)(app);
   // meta
   const meta = {
     base: {
@@ -2514,7 +2958,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 230:
+/***/ 3230:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2525,7 +2969,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 825:
+/***/ 3825:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2536,7 +2980,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 214:
+/***/ 7214:
 /***/ ((module) => {
 
 module.exports = app => {
@@ -2547,7 +2991,7 @@ module.exports = app => {
 
 /***/ }),
 
-/***/ 638:
+/***/ 5638:
 /***/ ((module) => {
 
 "use strict";
@@ -2555,7 +2999,7 @@ module.exports = require("require3");
 
 /***/ }),
 
-/***/ 147:
+/***/ 7147:
 /***/ ((module) => {
 
 "use strict";
@@ -2563,7 +3007,7 @@ module.exports = require("fs");
 
 /***/ }),
 
-/***/ 37:
+/***/ 2037:
 /***/ ((module) => {
 
 "use strict";
@@ -2571,7 +3015,7 @@ module.exports = require("os");
 
 /***/ }),
 
-/***/ 17:
+/***/ 1017:
 /***/ ((module) => {
 
 "use strict";
@@ -2610,7 +3054,7 @@ module.exports = require("path");
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __webpack_require__(421);
+/******/ 	var __webpack_exports__ = __webpack_require__(9421);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

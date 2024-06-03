@@ -92,7 +92,7 @@ export default {
       const data = await this.$api.post('/a/base/atom/checkRightAction', {
         key: { atomId: this.atomId },
         action: 3,
-        stage: 'draft',
+        // stage: 'draft', // support formal
         checkFlow: true,
       });
       if (data && data.atomClosed === 0) {
@@ -159,8 +159,7 @@ export default {
       }
     },
     getItemMedia(item) {
-      const media = item.avatar || this.$meta.config.modules['a-base'].user.avatar.default;
-      return this.$meta.util.combineImageUrl(media, 32);
+      return this.$meta.util.combineAvatarUrl(item.avatar, 32);
     },
   },
 };

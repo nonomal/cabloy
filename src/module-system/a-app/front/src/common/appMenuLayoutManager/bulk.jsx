@@ -16,8 +16,9 @@ export default {
       });
     },
     async bulk_onPerformLanguage(event) {
+      const useStoreApp = await this.$store.use('a/app/app');
       // get current
-      const current = this.$store.getters['a/app/current'];
+      const current = useStoreApp.current;
       const _action = {
         actionModule: 'a-base',
         actionComponent: 'action',
@@ -34,7 +35,7 @@ export default {
       });
       if (!locale) return;
       // set current
-      this.$meta.store.commit('a/app/setCurrent', { appLanguage: locale.value });
+      await useStoreApp.setCurrent({ appLanguage: locale.value });
       // open app home for layoutpc
       if (this.$meta.vueApp.layout === 'pc') {
         await this.$meta.vueLayout.app_openAppHome({ force: false });
@@ -59,7 +60,7 @@ export default {
     },
     bulk_renderSearch() {
       // layout
-      if (this.$meta.vueApp.layout !== 'mobile') return null;
+      if (this.$meta.vueApp.layout !== 'mobile' || this.base.appInfoCurrent.appItem.appIsolate) return null;
       return (
         <eb-link
           key="search"
@@ -73,7 +74,8 @@ export default {
       const appItem = this.base.appInfoCurrent.appItem;
       if (!appItem || !appItem.appLanguage) return null;
       // get current
-      const current = this.$store.getters['a/app/current'];
+      const useStoreApp = this.$store.useSync('a/app/app');
+      const current = useStoreApp.current;
       const lang = current.appLanguage.split('-')[0];
       const title = lang.replace(lang[0], lang[0].toUpperCase());
       return (
@@ -87,7 +89,7 @@ export default {
       // appDefault
       children.push(this.bulk_renderAppDefault());
       // search
-      children.push(this.bulk_renderSearch());
+      // children.push(this.bulk_renderSearch());
       // language
       children.push(this.bulk_renderLanguage());
       // ok

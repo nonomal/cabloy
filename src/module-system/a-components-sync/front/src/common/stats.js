@@ -21,6 +21,7 @@ export default {
       this.$nextTick(() => {
         this.stats_setValue(null);
         this.stats_init();
+        this.stats_setDevInfo();
       });
     },
   },
@@ -32,11 +33,31 @@ export default {
   created() {
     this.stats_init();
   },
+  mounted() {
+    this.stats_setDevInfo();
+  },
   beforeDestroy() {
     // unsubscribe
     this.stats_unsubscribe();
   },
   methods: {
+    stats_setDevInfo() {
+      // el
+      const $domEl = this.$$(this.$el);
+      if (this.$meta.config.env === 'development') {
+        const statsParams = this.stats_params;
+        let devInfo;
+        if (!statsParams) {
+          devInfo = 'null';
+        } else {
+          devInfo = `${statsParams.module}:${statsParams.name}`;
+          if (statsParams.nameSub) {
+            devInfo = `${devInfo}.${statsParams.nameSub}`;
+          }
+        }
+        $domEl.attr('data-dev-stats-params', devInfo);
+      }
+    },
     async stats_init() {
       this.stats_unsubscribe();
       if (this.stats_user && !this.stats_user.anonymous && this.stats_params) {
@@ -44,15 +65,25 @@ export default {
       }
     },
     async stats_loadValue() {
-      const value = await this.$api.post(
-        '/a/stats/stats/get',
-        {
+      if (!this.stats_io) return;
+      const value = await this.stats_io.performAction({
+        method: 'post',
+        url: '/a/stats/stats/get',
+        body: {
           module: this.stats_params.module,
           name: this.stats_params.name,
           nameSub: this.stats_params.nameSub,
         },
-        { debounce: true }
-      );
+      });
+      // const value = await this.$api.post(
+      //   '/a/stats/stats/get',
+      //   {
+      //     module: this.stats_params.module,
+      //     name: this.stats_params.name,
+      //     nameSub: this.stats_params.nameSub,
+      //   },
+      //   { debounce: true }
+      // );
       if (value === undefined) {
         this.stats_setValue(this.stats_default);
       } else {
@@ -61,12 +92,8 @@ export default {
     },
     async stats_subscribe() {
       // io
-      const action = {
-        actionModule: 'a-socketio',
-        actionComponent: 'io',
-        name: 'instance',
-      };
-      this.stats_io = await this.$meta.util.performAction({ ctx: this, action });
+      const useStoreSocketIO = await this.$store.use('a/socketio/socketio');
+      this.stats_io = useStoreSocketIO.getInstance();
       // socket io
       const subscribePath = this.stats_getSubscribePath();
       this.stats_subscribeId = this.stats_io.subscribe(subscribePath, this.stats_onMessage, this.stats_onSubscribed);

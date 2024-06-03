@@ -8,13 +8,12 @@ const path = __webpack_require__(17);
 const fs = __webpack_require__(147);
 const require3 = __webpack_require__(638);
 const sendToWormhole = require3('stream-wormhole');
-const uuid = require3('uuid');
-const gm = require3('gm');
+const Jimp = require3('jimp');
 const bb = require3('bluebird');
 const pump = require3('pump');
 const fse = require3('fs-extra');
-const extend = require3('extend2');
 const base64url = require3('base64url');
+const Mime = require3('mime');
 
 const REGEXP_DATA_URL = /^data:([^;]+);[^,]*base64,(.*)/;
 
@@ -95,7 +94,7 @@ module.exports = ctx => {
     async attachments({ key, options, user }) {
       options = options || {};
       // filter drafts
-      options.where = extend(true, options.where, {
+      options.where = ctx.bean.util.extend(options.where, {
         mode: 2,
         attachment: 1,
       });
@@ -168,7 +167,7 @@ module.exports = ctx => {
       const encoding = data.encoding || '7bit';
       // content
       const fileContent = base64url.toBuffer(contentBase64);
-      console.log('----fileContent: ', typeof fileContent);
+      // console.log('----fileContent: ', typeof fileContent);
       // meta
       const meta = {
         filename,
@@ -184,12 +183,42 @@ module.exports = ctx => {
       return await this._upload({ fileContent, meta, user });
     }
 
+    async uploadByLocalFile({ pathFile, meta, user }) {
+      if (!meta) meta = {};
+      if (!meta.fields) meta.fields = {};
+      // mode
+      if (!meta.fields.mode) {
+        meta.fields.mode = 2; // file
+      }
+      // filename
+      if (!meta.filename) {
+        meta.filename = path.basename(pathFile);
+      }
+      // encoding
+      if (!meta.encoding) {
+        meta.encoding = '7bit';
+      }
+      // mime
+      if (!meta.mime) {
+        meta.mime = Mime.getType(pathFile);
+      }
+      // content
+      const fileContent = await fse.readFile(pathFile);
+      // upload
+      return await this._upload({
+        fileContent,
+        meta,
+        user,
+      });
+    }
+
     async _upload({ fileContent, meta, user }) {
       // info
       const fileInfo = path.parse(meta.filename);
       if (fileInfo.name === '_none_') {
         fileInfo.name = '';
       }
+      if (fileInfo.ext) fileInfo.ext = fileInfo.ext.toLowerCase();
       const encoding = meta.encoding;
       const mime = meta.mime;
       const fields = meta.fields;
@@ -204,50 +233,20 @@ module.exports = ctx => {
       if (fileInfo.ext === '.jpeg') fileInfo.ext = '.jpg';
 
       // dest
-      const downloadId = uuid.v4().replace(/-/g, '');
+      const downloadId = ctx.bean.util.uuidv4();
       const _filePath = `file/${mode === 1 ? 'image' : mode === 2 ? 'file' : 'audio'}/${ctx.bean.util.today()}`;
-      const _fileName = uuid.v4().replace(/-/g, '');
+      const _fileName = ctx.bean.util.uuidv4();
       const destDir = await ctx.bean.base.getPath(_filePath, true);
       const destFile = path.join(destDir, `${_fileName}${fileInfo.ext}`);
 
       // write
       if (mode === 1) {
-        if (fileInfo.ext === '.svg' || fileInfo.ext === '.svgz') {
+        if (!this._isSupportedImageTypes(fileInfo.ext)) {
           await this._outputFileContent({ destFile, fileContent });
         } else {
-          // image
-          await bb.fromCallback(cb => {
-            let img = gm(fileContent);
-            // crop
-            if (fields.cropped === 'true') {
-              const cropbox = JSON.parse(fields.cropbox);
-              img = img.crop(
-                parseInt(cropbox.width),
-                parseInt(cropbox.height),
-                parseInt(cropbox.x),
-                parseInt(cropbox.y)
-              );
-            }
-            // fixed
-            if (fields.fixed) {
-              const fixed = JSON.parse(fields.fixed);
-              if (fixed.width && fixed.height) {
-                img = img.resize(fixed.width, fixed.height, '!');
-              } else if (fixed.width) {
-                img = img.resize(fixed.width);
-              } else if (fixed.height) {
-                img = img.resize(null, fixed.height);
-              }
-            }
-            // save
-            img.quality(93).write(destFile, cb);
-          });
-          // size
-          const imgSize = await bb.fromCallback(cb => {
-            gm(destFile).size(cb);
-          });
-          imgWidth = imgSize.width;
-          imgHeight = imgSize.height;
+          const size = await this._outputImageContent({ destFile, fileContent, fields, fileInfo });
+          imgWidth = size.width;
+          imgHeight = size.height;
         }
       } else if (mode === 2 || mode === 3) {
         // check right only for file
@@ -310,7 +309,7 @@ module.exports = ctx => {
       // pre
       let fileName = file.fileName;
       if (file.mode === 1) {
-        if (file.fileExt !== '.svg' && file.fileExt !== '.svgz') {
+        if (this._isSupportedImageTypes(file.fileExt)) {
           // adjust image
           fileName = await this._adjustImage(file, width, height);
         }
@@ -325,7 +324,7 @@ module.exports = ctx => {
       const forwardUrl = ctx.bean.base.getForwardUrl(`${file.filePath}/${fileName}${file.fileExt}`);
 
       // send
-      if (ctx.app.meta.isTest || ctx.app.meta.isLocal) {
+      if (!ctx.bean.base.useAccelRedirect()) {
         // redirect
         ctx.redirect(forwardUrl);
       } else {
@@ -458,6 +457,12 @@ module.exports = ctx => {
       });
     }
 
+    _isSupportedImageTypes(fileExt) {
+      return (
+        !['.svg', '.svgz'].includes(fileExt) && ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'].includes(fileExt)
+      );
+    }
+
     async _adjustImage(file, widthRequire, heightRequire) {
       widthRequire = widthRequire ? parseInt(widthRequire) : 0;
       heightRequire = heightRequire ? parseInt(heightRequire) : 0;
@@ -474,8 +479,12 @@ module.exports = ctx => {
       const height = heightRequire || parseInt((file.height * widthRequire) / file.width);
 
       const srcFile = await ctx.bean.base.getPath(`${file.filePath}/${file.fileName}${file.fileExt}`, false);
+
+      // image
+      let img = await Jimp.read(srcFile);
+      img = img.resize(width, height);
       await bb.fromCallback(cb => {
-        gm(srcFile).resize(width, height, '!').quality(100).write(destFile, cb);
+        img.write(destFile, cb);
       });
 
       return fileName;
@@ -505,13 +514,52 @@ module.exports = ctx => {
       const res = await ctx.bean.atom.checkRightAction({
         atom: { id: atomId },
         action: 3,
-        stage: 'draft',
+        // stage: 'draft', // support formal
         user,
         checkFlow: true,
         disableAuthOpenCheck: true,
       });
       if (res && res.atomClosed === 0) return;
       ctx.throw(403);
+    }
+
+    async _outputImageContent({ destFile, fileContent, fields, fileInfo }) {
+      // prepare image content
+      const tmpFile = destFile + fileInfo.ext;
+      await this._outputFileContent({ destFile: tmpFile, fileContent });
+      // image
+      let img = await Jimp.read(tmpFile);
+      // crop
+      if (fields.cropped === 'true') {
+        const cropbox = JSON.parse(fields.cropbox);
+        img = img.crop(parseInt(cropbox.x), parseInt(cropbox.y), parseInt(cropbox.width), parseInt(cropbox.height));
+      }
+      // fixed
+      if (fields.fixed) {
+        const fixed = JSON.parse(fields.fixed);
+        if (fixed.width && fixed.height) {
+          img = img.resize(fixed.width, fixed.height);
+        } else if (fixed.width) {
+          img = img.resize(fixed.width, Jimp.AUTO);
+        } else if (fixed.height) {
+          img = img.resize(Jimp.AUTO, fixed.height);
+        }
+      }
+      // quality
+      if (['.png', '.jpg', '.jpeg'].includes(fileInfo.ext)) {
+        img = img.quality(93);
+      }
+      // save
+      await bb.fromCallback(cb => {
+        img.write(destFile, cb);
+      });
+      // size
+      const width = img.bitmap.width;
+      const height = img.bitmap.height;
+      // delete tmp file
+      await fse.remove(tmpFile);
+      // ready
+      return { width, height };
     }
 
     async _outputFileContent({ destFile, fileContent }) {

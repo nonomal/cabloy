@@ -1,20 +1,20 @@
 // Deprecate: ebCurrency\ebLocale\ebDateFormat\ebTextarea\ebSecure\ebInputType
 export default {
   methods: {
-    _formatValueCurrency(value) {
-      if (isNaN(value)) return value;
-      return (Number(value) / 100).toFixed(2);
+    _formatValueCurrency(value, currencyOptions) {
+      const currency = this.$meta.util.currency(currencyOptions);
+      return currency.format(value);
     },
-    _updateValueCurrency(value) {
-      if (isNaN(value)) return value;
-      return Number((Number(value) * 100).toFixed(0));
+    _updateValueCurrency(value, currencyOptions) {
+      const currency = this.$meta.util.currency(currencyOptions);
+      return currency.update(value);
     },
     _formatTextGeneral(property, value) {
       if (this.checkIfEmptyForSelect(value)) return value;
       // currency
       const ebCurrency = this.$meta.util.getPropertyDeprecate(property, 'ebParams.currency', 'ebCurrency');
       if (ebCurrency) {
-        value = this._formatValueCurrency(value);
+        value = this._formatValueCurrency(value, ebCurrency);
       }
       // locale
       const ebLocale = this.$meta.util.getPropertyDeprecate(property, 'ebParams.locale', 'ebLocale');
@@ -34,13 +34,13 @@ export default {
     },
     renderText(context) {
       const { key, property, dataPath } = context;
-      const title = this.getTitle(context);
       let value = context.getValue();
       // params
       const ebCurrency = this.$meta.util.getPropertyDeprecate(property, 'ebParams.currency', 'ebCurrency');
       const ebTextarea = this.$meta.util.getPropertyDeprecate(property, 'ebParams.textarea', 'ebTextarea');
       const ebSecure = this.$meta.util.getPropertyDeprecate(property, 'ebParams.secure', 'ebSecure');
       const ebInputType = this.$meta.util.getPropertyDeprecate(property, 'ebParams.inputType', 'ebInputType');
+      const ebInputMode = this.$meta.util.getPropertyDeprecate(property, 'ebParams.inputMode', 'ebInputMode');
       const ebImmediate = this.$meta.util.getPropertyDeprecate(property, 'ebParams.immediate', 'ebImmediate');
       const immediate = ebImmediate !== false && !ebCurrency;
       // format
@@ -49,10 +49,8 @@ export default {
       if ((this.validate.readOnly || property.ebReadOnly) && !ebTextarea) {
         const valueView = this._formatTextView(value);
         return (
-          <f7-list-item key={key} staticClass="" after={valueView}>
-            <div slot="title" staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
-              {title}
-            </div>
+          <f7-list-item key={key} after={valueView}>
+            {context.renderTitle({ slot: 'title' })}
           </f7-list-item>
         );
       }
@@ -72,6 +70,7 @@ export default {
       const props = {
         floatingLabel: this.$config.form.floatingLabel,
         type,
+        inputmode: ebInputMode,
         placeholder,
         info,
         resizable: ebTextarea,
@@ -91,14 +90,14 @@ export default {
           }}
           onChange={valueNew => {
             if (!immediate) {
-              valueNew = this._updateValueCurrency(valueNew);
+              if (ebCurrency) {
+                valueNew = this._updateValueCurrency(valueNew, ebCurrency);
+              }
               context.setValue(valueNew);
             }
           }}
         >
-          <div slot="label" staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
-            {title}
-          </div>
+          {context.renderTitle({ slot: 'label' })}
           {this.__searchStates_render_list_item(context)}
         </eb-list-input>
       );

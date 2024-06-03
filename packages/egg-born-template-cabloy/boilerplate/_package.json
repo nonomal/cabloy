@@ -2,8 +2,13 @@
   "name": "{{name}}",
   "version": "1.0.0",
   "title": "{{name}}",
+  "private": true,
+  "workspaces": ["src/module/*", "src/module-vendor/*", "src/suite/*/modules/*", "src/suite-vendor/*/modules/*"],
   "description": "{{description}}",
   "keywords": ["Cabloy Project"],
+  "engines": {
+    "node": "^14.15.0 || >=16.0.0"
+  },
   "scripts": {
     "cli": "egg-born-bin cli",
     "db:reset": "egg-born-bin backend-db-reset",
@@ -16,12 +21,15 @@
     "start:backend": "egg-born-scripts backend-start",
     "start:backend-daemon": "egg-born-scripts backend-start --daemon",
     "stop:backend": "egg-born-scripts backend-stop",
+    "release": "egg-born-bin release",
+    "release:front": "egg-born-bin release-front",
+    "release:backend": "egg-born-bin release-backend",
     "format": "prettier --write \"**/*.js\" \"**/*.json\" \"**/*.jsx\" \"**/*.vue\"",
     "lint": "prettier --check \"**/*.js\" \"**/*.json\" \"**/*.jsx\" \"**/*.vue\""
   },
   "author": "{{author}}",
   "devDependencies": {},
   "dependencies": {
-    "cabloy": "^4.22.41"
+    "cabloy": "^5.0.0"
   }
 }

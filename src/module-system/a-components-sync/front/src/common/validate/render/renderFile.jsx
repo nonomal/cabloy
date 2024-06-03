@@ -35,8 +35,8 @@ export default {
       );
     },
     renderFile(context) {
-      const { parcel, key, property, dataPath } = context;
-      const title = this.getTitle(context);
+      const { /* parcel,*/ key, property, dataPath } = context;
+      const title = this.getTitle(context, true); // only for photobrowser
       const value = context.getValue();
       // params
       const mode = property.ebParams.mode;
@@ -44,11 +44,7 @@ export default {
       const ebSecure = this.$meta.util.getPropertyDeprecate(property, 'ebParams.secure', 'ebSecure');
       if ((this.validate.readOnly || property.ebReadOnly) && !ebTextarea) {
         const children = [];
-        children.push(
-          <div key="title" slot="title" staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
-            {title}
-          </div>
-        );
+        children.push(context.renderTitle({ key: 'title', slot: 'title' }));
         if (mode === 1 && value) {
           const domButton = this._renderFileButtonPhotoView(context, title, value);
           children.push(
@@ -58,13 +54,13 @@ export default {
           );
         } else {
           children.push(
-            <div key="value" slot="after" staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
+            <div key="value" slot="after" class={property.ebReadOnly ? 'text-color-gray' : ''}>
               {value}
             </div>
           );
         }
         return (
-          <f7-list-item key={key} staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
+          <f7-list-item key={key} class={property.ebReadOnly ? 'text-color-gray' : ''}>
             {children}
           </f7-list-item>
         );
@@ -80,12 +76,7 @@ export default {
         type = 'text';
       }
       // atomId: maybe from host
-      let atomId = (this.validate.host && this.validate.host.atomId) || property.ebParams.atomId;
-      if (typeof atomId === 'string') {
-        atomId = parcel.data[atomId] || 0;
-      } else {
-        atomId = atomId || 0;
-      }
+      const atomId = this.getAtomId(context);
       // attachment
       const attachment = property.ebParams.attachment;
       // flag
@@ -129,13 +120,9 @@ export default {
       );
       // children
       const children = [];
+      children.push(context.renderTitle({ key: 'label', slot: 'label' }));
       children.push(
-        <div key="label" slot="label" staticClass={property.ebReadOnly ? 'text-color-gray' : ''}>
-          {title}
-        </div>
-      );
-      children.push(
-        <div key="buttons" slot="root-end" staticClass="eb-input-file-upload">
+        <div key="buttons" slot="root-end" class="eb-input-file-upload">
           {buttons}
         </div>
       );

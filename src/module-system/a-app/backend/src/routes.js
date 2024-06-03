@@ -1,4 +1,4 @@
-module.exports = app => {
-  const routes = [];
-  return routes;
-};
+module.exports = [
+  // resource
+  { method: 'post', path: 'resource/read', controller: 'resource' },
+];

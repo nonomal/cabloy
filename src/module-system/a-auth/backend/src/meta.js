@@ -1,18 +1,17 @@
-module.exports = app => {
-  const schemas = require('./config/validation/schemas.js')(app);
-  const meta = {
-    base: {
-      atoms: {},
+const schemas = require('./meta/validation/schemas.js');
+const meta = {
+  base: {
+    atoms: {},
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
+  settings: {
+    user: {
+      actionPath: '/a/user/user/authentications',
     },
-    validation: {
-      validators: {
-        oauth2: {
-          schemas: 'oauth2',
-        },
-      },
-      keywords: {},
-      schemas,
-    },
-  };
-  return meta;
+  },
 };
+module.exports = meta;

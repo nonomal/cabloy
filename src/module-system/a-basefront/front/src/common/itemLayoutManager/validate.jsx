@@ -13,6 +13,13 @@ export default {
         stage,
         mode: this.container.mode,
         atomId: this.container.atomId,
+        container: this.container,
+        atomClassBase: this.base.atomClassBase,
+        atomIdMain: this.base_atomIdMain,
+        atomMain: this.base_atomMain,
+        flowTaskId: this.base_flowTaskId,
+        formAction: this.base_formAction,
+        formActionMain: this.base_formActionMain,
       };
     },
   },
@@ -34,13 +41,15 @@ export default {
       } catch (err) {
         if (err.code === 422) {
           // eslint-disable-next-line
-          this.validate.errors = err.message;
+          const errMessage = JSON.parse(err.message);
+          this.validate.errors = errMessage;
           const message = this.$text('Data Validation Error');
           this.$view.toast.show({ text: message });
-          this.$nextTick(() => {
-            // switch layout
-            this.layout_switchLayout('default');
-          });
+          // need not switch layout, because saveDraftOnly take effect
+          // this.$nextTick(() => {
+          //   // switch layout
+          //   this.layout_switchLayout('default');
+          // });
           return;
         }
         if (err.message) {
@@ -51,13 +60,77 @@ export default {
     },
     async validate_onPerformValidate(event, options) {
       const actionName = options && options.action;
-      const action = this.$utils.extend({}, this.actions_findAction('write'), { name: actionName });
-      const _action = this.getAction(action);
-      const res = await this.$meta.util.performAction({ ctx: this, action: _action, item: this.base.item });
+      const action = Object.assign({}, this.actions_findAction('write'), { name: actionName });
+      let actionBase = this.getAction(action);
+      // dataOptions
+      const dataOptions = {
+        atomIdMain: this.base_atomIdMain,
+        atomMain: this.base_atomMain,
+      };
+      if (this.base_flowTaskId) {
+        dataOptions.flowTaskId = this.base_flowTaskId;
+      }
+      if (this.base_formAction) {
+        dataOptions.formAction = this.base_formAction;
+      }
+      if (this.base_formActionMain) {
+        dataOptions.formActionMain = this.base_formActionMain;
+      }
+      if (this.container.params?.createDelay) {
+        const dataOptionsCreateDelay = this.container.params?.createDelay.dataOptions;
+        dataOptions.createDelay = true;
+        dataOptions.createContinue = true;
+        dataOptions.createParams = dataOptionsCreateDelay.createParams;
+      }
+      // actionBase: not use this.$utils.extend
+      actionBase = Object.assign({}, actionBase, { dataOptions });
+      // performAction: save
+      const itemWrited = await this.$meta.util.performAction({ ctx: this, action: actionBase, item: this.base.item });
+      if (actionName === 'save' || actionName === 'submit') {
+        await this.validate_onPerformValidate_createDelay({ itemWrited });
+      }
+      // page dirty
       if (actionName === 'save' || actionName === 'submit') {
         this.page_setDirty(false);
       }
-      return res;
+      return itemWrited;
+    },
+    async validate_onPerformValidate_createDelay({ itemWrited }) {
+      if (!this.container.params?.createDelay) {
+        // do nothing
+        return;
+      }
+      // create
+      const useStoreAtomActions = await this.$store.use('a/basestore/atomActions');
+      let actionCreate = await useStoreAtomActions.getActionBase({
+        atomClass: this.base.atomClass,
+        name: 'create',
+      });
+      // dataOptions
+      let dataOptions = this.container.params?.createDelay.dataOptions;
+      dataOptions = Object.assign({}, dataOptions, { createContinue: true, noActionWrite: true });
+      actionCreate = Object.assign({}, actionCreate, { dataOptions });
+      // create
+      await this.$meta.util.performAction({ ctx: this, action: actionCreate, item: itemWrited });
+      // makeup
+      await this.validate_onPerformValidate_createDelay_makeup({ itemWrited });
+    },
+    async validate_onPerformValidate_createDelay_makeup({ itemWrited }) {
+      if (!this.base.item) {
+        // means will be closed
+        return;
+      }
+      // clear createDelay
+      this.container.params.createDelay = null;
+      // container
+      this.container.atomId = itemWrited.atomId;
+      this.container.itemId = itemWrited.itemId;
+      // item
+      this.$meta.util.replaceItem(this.base.item, itemWrited);
+      //   force validate reactive
+      this.base.item = Object.assign({}, this.base.item);
+      // actions
+      await this.actions_fetchActions();
     },
     validate_onValidateItemChange() {
       if (this.container.mode !== 'edit') return;
@@ -72,6 +145,9 @@ export default {
     validate_render(options) {
       options = options || {};
       if (!this.base_ready) return null;
+      const meta = {
+        schema: this.base.validateSchema,
+      };
       return (
         <eb-validate
           ref="validate"
@@ -79,7 +155,7 @@ export default {
           readOnly={this.container.mode !== 'edit'}
           auto
           data={this.base.item}
-          params={this.base.validateParams}
+          meta={meta}
           errors={this.validate.errors}
           propsOnPerform={this.validate_onPerformValidate}
           onSubmit={options.validate_onSubmit || this.validate_onSubmit}

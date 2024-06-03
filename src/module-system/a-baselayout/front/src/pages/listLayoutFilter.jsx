@@ -3,6 +3,7 @@ const ebPageContext = Vue.prototype.$meta.module.get('a-components').options.mix
 const ebAtomClasses = Vue.prototype.$meta.module.get('a-base').options.mixins.ebAtomClasses;
 import tabBasic from '../components/filter/tabBasic.jsx';
 import tabGeneral from '../components/filter/tabGeneral.jsx';
+import tabState from '../components/filter/tabState.jsx';
 import tabCategory from '../components/filter/tabCategory.jsx';
 import tabTag from '../components/filter/tabTag.jsx';
 
@@ -11,6 +12,7 @@ export default {
   components: {
     tabBasic,
     tabGeneral,
+    tabState,
     tabCategory,
     tabTag,
   },
@@ -19,6 +21,7 @@ export default {
       tabId: {
         basic: Vue.prototype.$meta.util.nextId('basic'),
         general: Vue.prototype.$meta.util.nextId('general'),
+        state: Vue.prototype.$meta.util.nextId('state'),
         category: Vue.prototype.$meta.util.nextId('category'),
         tag: Vue.prototype.$meta.util.nextId('tag'),
       },
@@ -60,6 +63,9 @@ export default {
       },
     },
     //
+    itemOnly() {
+      return !!(this.layoutManager.base.atomClassBase && this.layoutManager.base.atomClassBase.itemOnly);
+    },
     atomClass() {
       return this.form.atomClass;
     },
@@ -86,6 +92,15 @@ export default {
         stages.push({ title: key.replace(key[0], key[0].toUpperCase()), value: key });
       }
       return stages;
+    },
+    atomStateDict() {
+      const useStoreAtomState = Vue.prototype.$meta.store.useSync('a/basestore/atomState');
+      if (!useStoreAtomState) return null;
+      const dict = useStoreAtomState.getDictSync({
+        atomClass: this.atomClass,
+        atomStage: this.stage,
+      });
+      return dict;
     },
   },
   watch: {
@@ -236,6 +251,14 @@ export default {
       };
       return host;
     },
+    _renderNavbarItemOnly() {
+      const domNavbarRight = this._renderNavbarRight();
+      return (
+        <eb-navbar title={this.pageTitle} eb-back-link="Back">
+          {domNavbarRight}
+        </eb-navbar>
+      );
+    },
     _renderNavbar() {
       const domNavbarRight = this._renderNavbarRight();
       const domNavbarSub = this._renderNavbarSub();
@@ -258,6 +281,11 @@ export default {
       const domLinkBasic = this._renderNavbarSubLink('basic', 'Basic');
       // general
       const domLinkGeneral = this._renderNavbarSubLink('general', 'General');
+      // state: not support history
+      let domLinkState;
+      if (this.atomStateDict) {
+        domLinkState = this._renderNavbarSubLink('state', 'State');
+      }
       // category
       let domLinkCategory;
       if (this.atomClassBase && this.atomClassBase.category) {
@@ -273,10 +301,22 @@ export default {
           <f7-toolbar top tabbar>
             {domLinkBasic}
             {domLinkGeneral}
+            {domLinkState}
             {domLinkCategory}
             {domLinkTag}
           </f7-toolbar>
         </f7-subnavbar>
+      );
+    },
+    _renderTabItemOnly() {
+      if (!this.ready) return;
+      return (
+        <tabBasic
+          layoutManager={this.layoutManager}
+          filterConfig={this.filterConfig}
+          filterContainer={this}
+          itemOnly={true}
+        ></tabBasic>
       );
     },
     _renderTabs() {
@@ -285,6 +325,11 @@ export default {
       const domTabBasic = this._renderTab('basic', 'tabBasic');
       // general
       const domTabGeneral = this._renderTab('general', 'tabGeneral');
+      // state
+      let domTabState;
+      if (this.atomStateDict) {
+        domTabState = this._renderTab('state', 'tabState');
+      }
       // category
       let domTabCategory;
       if (this.atomClassBase && this.atomClassBase.category) {
@@ -299,6 +344,7 @@ export default {
         <f7-tabs>
           {domTabBasic}
           {domTabGeneral}
+          {domTabState}
           {domTabCategory}
           {domTabTag}
         </f7-tabs>
@@ -327,10 +373,20 @@ export default {
     },
   },
   render() {
+    const pageContent = this.itemOnly;
+    const tabs = !this.itemOnly;
+    // const withSubnavbar = !this.itemOnly; // no need
+    const domChildren = [];
+    if (this.itemOnly) {
+      domChildren.push(this._renderNavbarItemOnly());
+      domChildren.push(this._renderTabItemOnly());
+    } else {
+      domChildren.push(this._renderNavbar());
+      domChildren.push(this._renderTabs());
+    }
     return (
-      <eb-page page-content={false} tabs with-subnavbar>
-        {this._renderNavbar()}
-        {this._renderTabs()}
+      <eb-page page-content={pageContent} tabs={tabs}>
+        {domChildren}
       </eb-page>
     );
   },

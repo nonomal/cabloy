@@ -54,8 +54,7 @@ module.exports = appInfo => {
       aDashboardUser: 'createdAt,updatedAt,userId,dashboardAtomId',
     },
     'a-detail': {
-      aDetail: 'createdAt,updatedAt,atomId,detailItemId,detailClassId,detailStaticKey',
-      aDetailClass: 'createdAt,updatedAt,module+detailClassName',
+      aDetailBase: 'createdAt,updatedAt,atomIdMain,atomClassIdMain,detailId,detailClassId,detailStaticKey',
     },
     'a-dict': {
       aDict: 'createdAt,updatedAt,atomId',
@@ -77,8 +76,9 @@ module.exports = appInfo => {
     },
     'a-flowtask': {
       aFlowNodeStartEventAtomCondition: 'createdAt,updatedAt,flowDefId,atomClassId',
-      aFlowTask: 'createdAt,updatedAt,flowId,flowNodeId,flowTaskStatus,userIdAssignee',
-      aFlowTaskHistory: 'createdAt,updatedAt,flowId,flowTaskId,flowNodeId,flowTaskStatus,userIdAssignee',
+      aFlowTask: 'createdAt,updatedAt,flowId,flowNodeId,flowTaskStatus,userIdAssignee,allowViewWorkflow',
+      aFlowTaskHistory:
+        'createdAt,updatedAt,flowId,flowTaskId,flowNodeId,flowTaskStatus,userIdAssignee,allowViewWorkflow',
     },
     'a-instance': {
       aInstance: 'createdAt,updatedAt,name',

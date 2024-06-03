@@ -11,12 +11,6 @@ export default {
       atomClass,
       language,
       languageTitle,
-      root: {
-        attrs: {
-          itemToggle: false,
-          selectable: true,
-        },
-      },
     };
   },
   computed: {
@@ -24,6 +18,18 @@ export default {
       const title = this.$text('Categories');
       if (!this.language) return title;
       return `${title}: ${this.languageTitle}`;
+    },
+    maxLevelAutoOpened() {
+      return this.$meta.config.modules['a-baseadmin'].category.select.maxLevelAutoOpened;
+    },
+    root() {
+      return {
+        attrs: {
+          itemToggle: false,
+          selectable: true,
+          maxLevelAutoOpened: this.maxLevelAutoOpened,
+        },
+      };
     },
   },
   mounted() {
@@ -46,21 +52,20 @@ export default {
     async onLoadChildren(node) {
       // root
       if (node.root) {
-        return [
-          {
-            id: 0,
-            attrs: {
-              link: '#',
-              label: this.$text('Root'),
-              toggle: true,
-              loadChildren: true,
-            },
-            data: {
-              id: 0,
-              categoryCatalog: 1,
-            },
+        const nodeAll = {
+          id: 0,
+          attrs: {
+            link: '#',
+            label: this.$text('All'),
+            toggle: true,
+            loadChildren: true,
           },
-        ];
+          data: {
+            id: 0,
+            categoryCatalog: 1,
+          },
+        };
+        return [nodeAll];
       }
       // children
       const data = await this.$api.post('/a/base/category/children', {
@@ -68,8 +73,9 @@ export default {
         language: this.language,
         categoryId: node.id,
       });
-      const list = data.list.map(item => {
-        const node = {
+      const list = [];
+      for (const item of data.list) {
+        const nodeChild = {
           id: item.id,
           attrs: {
             link: '#',
@@ -79,8 +85,8 @@ export default {
           },
           data: item,
         };
-        return node;
-      });
+        list.push(nodeChild);
+      }
       return list;
     },
     onNodePerformClick(event, context, node) {

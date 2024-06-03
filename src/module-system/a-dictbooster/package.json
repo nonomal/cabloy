@@ -1,13 +1,13 @@
 {
   "name": "egg-born-module-a-dictbooster",
-  "version": "4.1.13",
+  "version": "5.0.0",
   "title": "Dict Booster",
   "eggBornModule": {
     "fileVersion": 0,
     "dependencies": {
-      "a-instance": "4.0.0",
-      "a-base": "4.0.0",
-      "a-flow": "4.0.0"
+      "a-instance": "5.0.0",
+      "a-base": "5.0.0",
+      "a-flow": "5.0.0"
     }
   },
   "description": "",
@@ -20,5 +20,6 @@
     "build:all": "npm run build:front && npm run build:backend",
     "preversion": "npm run build:all && git add ."
   },
-  "author": "zhennann"
+  "author": "zhennann",
+  "dependencies": {}
 }

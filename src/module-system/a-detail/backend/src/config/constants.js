@@ -1,99 +1,118 @@
-module.exports = app => {
-  const moduleInfo = app.meta.mockUtil.parseInfoFromPackage(__dirname);
-  return {
-    detail: {
-      action: {
-        create: 1,
-        read: 2,
-        write: 3,
-        delete: 4,
-        clone: 5,
-        moveUp: 6,
-        moveDown: 7,
+// const moduleInfo = module.info;
 
-        save: 51,
+const actionMeta = {
+  create: {
+    title: 'Create',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    bulk: true,
+    select: false,
+    icon: { f7: '::add' },
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+    createDelay: true,
+  },
+  read: {
+    title: 'View',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: '::visibility' },
+    rightInherit: 'read',
+    rightInheritStage: '',
+    mode: 'view',
+  },
+  write: {
+    title: 'Edit',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: '::edit' },
+    color: 'orange',
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+    directShowOnSwipeout: true,
+    directShowOnList: true,
+  },
+  delete: {
+    title: 'Delete',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: '::delete' },
+    color: 'red',
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+    directShowOnSwipeout: true,
+    directShowOnList: true,
+  },
+  clone: {
+    title: 'Clone',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: ':outline:copy-outline' },
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+  },
+  moveUp: {
+    title: 'Move Up',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: '::arrow-up' },
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+    directShowOnList: true,
+    disableOnItem: true,
+  },
+  moveDown: {
+    title: 'Move Down',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    icon: { f7: '::arrow-down' },
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+    directShowOnList: true,
+    disableOnItem: true,
+  },
+  save: {
+    title: 'Save',
+    actionModule: 'a-base',
+    actionComponent: 'action',
+    authorize: false,
+    icon: { f7: '::save' },
+    rightInherit: 'write',
+    rightInheritStage: 'draft',
+    mode: 'edit',
+  },
+  custom: {
+    title: 'Custom',
+  },
+};
+const actionMetaNotInline = {};
+for (const key in actionMeta) {
+  actionMetaNotInline[key] = Object.assign({}, actionMeta[key], { mode: null });
+}
+// action
+// const action = {
+//   create: 1,
+//   read: 2,
+//   write: 3,
+//   delete: 4,
+//   clone: 5,
+//   moveUp: 6,
+//   moveDown: 7,
+//   save: 51,
+//   custom: 100, // custom action start from custom
+// };
 
-        custom: 100, // custom action start from custom
-      },
-      actionMeta: {
-        create: {
-          title: 'Create',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          bulk: true,
-          icon: { f7: '::add' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        read: {
-          title: 'View',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: '::visibility' },
-          inherit: 'read',
-          mode: 'view',
-          stage: '',
-        },
-        write: {
-          title: 'Edit',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: '::edit' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        delete: {
-          title: 'Delete',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: '::delete' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        clone: {
-          title: 'Clone',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: ':outline:copy-outline' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        moveUp: {
-          title: 'Move Up',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: '::arrow-up' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        moveDown: {
-          title: 'Move Down',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          icon: { f7: '::arrow-down' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        save: {
-          title: 'Save',
-          actionModule: moduleInfo.relativeName,
-          actionComponent: 'action',
-          authorize: false,
-          icon: { f7: '::save' },
-          inherit: 'write',
-          mode: 'edit',
-          stage: 'draft',
-        },
-        custom: {
-          title: 'Custom',
-        },
-      },
-    },
-  };
+// ok
+module.exports = {
+  detail: {
+    // action,
+    actionMeta,
+    actionMetaNotInline,
+  },
 };

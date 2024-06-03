@@ -1,12 +1,12 @@
 {
   "name": "egg-born-module-a-antvg6",
-  "version": "4.1.10",
+  "version": "5.0.0",
   "title": "a-antvg6",
   "eggBornModule": {
     "fileVersion": 0,
     "dependencies": {
-      "a-instance": "4.0.0",
-      "a-base": "4.0.0"
+      "a-instance": "5.0.0",
+      "a-base": "5.0.0"
     }
   },
   "description": "",
@@ -21,6 +21,7 @@
   },
   "author": "zhennann",
   "devDependencies": {
-    "@antv/g6": "^4.3.11"
-  }
+    "@antv/g6": "^4.7.8"
+  },
+  "dependencies": {}
 }

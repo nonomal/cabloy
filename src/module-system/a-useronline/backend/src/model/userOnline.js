@@ -1,8 +1,12 @@
-module.exports = app => {
-  class UserOnline extends app.meta.Model {
-    constructor(ctx) {
-      super(ctx, { table: 'aUserOnline', options: { disableDeleted: false } });
-    }
+const moduleInfo = module.info;
+module.exports = class UserOnline extends module.meta.class.ModelCache {
+  constructor() {
+    super({
+      table: 'aUserOnline',
+      options: {
+        disableDeleted: false,
+        cacheName: { module: moduleInfo.relativeName, name: 'modelUserOnline' },
+      },
+    });
   }
-  return UserOnline;
 };

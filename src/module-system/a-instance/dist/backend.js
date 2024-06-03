@@ -5,7 +5,6 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const require3 = __webpack_require__(638);
-const extend = require3('extend2');
 const async = require3('async');
 const chalk = require3('chalk');
 const boxen = require3('boxen');
@@ -17,6 +16,10 @@ const __queueInstanceStartup = {};
 module.exports = ctx => {
   const moduleInfo = ctx.app.meta.mockUtil.parseInfoFromPackage(__dirname);
   class Instance {
+    get cacheMem() {
+      return ctx.cache.mem.module(moduleInfo.relativeName);
+    }
+
     async list(options) {
       // options
       if (!options) options = { where: null, orders: null, page: null };
@@ -35,8 +38,7 @@ module.exports = ctx => {
 
     async get({ subdomain }) {
       // cache
-      const cacheMem = ctx.cache.mem.module(moduleInfo.relativeName);
-      const instance = cacheMem.get('instance');
+      const instance = this.cacheMem.get('instance');
       if (instance) return instance;
       return await this.resetCache({ subdomain });
     }
@@ -87,32 +89,52 @@ module.exports = ctx => {
       return instances.find(item => item.subdomain === subdomain);
     }
 
+    async reload() {
+      // broadcast
+      ctx.meta.util.broadcastEmit({
+        module: 'a-instance',
+        broadcastName: 'reload',
+        data: null,
+      });
+    }
+
+    async instanceChanged(reload = true) {
+      if (reload) {
+        // force to reload instance
+        await this.reload();
+      } else {
+        // broadcast
+        ctx.meta.util.broadcastEmit({
+          module: 'a-instance',
+          broadcastName: 'resetCache',
+          data: null,
+        });
+      }
+    }
+
     async resetCache({ subdomain }) {
       // cache
-      const cacheMem = ctx.cache.mem.module(moduleInfo.relativeName);
       const instance = await this._get({ subdomain });
       if (!instance) return null;
       // config
       instance.config = JSON.parse(instance.config) || {};
       // cache configs
-      const instanceConfigs = extend(true, {}, ctx.app.meta.configs, instance.config);
-      cacheMem.set('instanceConfigs', instanceConfigs);
+      const instanceConfigs = ctx.bean.util.extend({}, ctx.app.meta.configs, instance.config);
+      this.cacheMem.set('instanceConfigs', instanceConfigs);
       // cache configsFront
       const instanceConfigsFront = this._mergeInstanceConfigFront({ instanceConfigs });
-      cacheMem.set('instanceConfigsFront', instanceConfigsFront);
+      this.cacheMem.set('instanceConfigsFront', instanceConfigsFront);
       // cache instance
-      cacheMem.set('instance', instance);
+      this.cacheMem.set('instance', instance);
       return instance;
     }
 
     getInstanceConfigs() {
-      const cacheMem = ctx.cache.mem.module(moduleInfo.relativeName);
-      return cacheMem.get('instanceConfigs');
+      return this.cacheMem.get('instanceConfigs');
     }
 
     getInstanceConfigsFront() {
-      const cacheMem = ctx.cache.mem.module(moduleInfo.relativeName);
-      return cacheMem.get('instanceConfigsFront');
+      return this.cacheMem.get('instanceConfigsFront');
     }
 
     _mergeInstanceConfigFront({ instanceConfigs }) {
@@ -224,12 +246,8 @@ module.exports = ctx => {
             id: instance.id,
             config: JSON.stringify(instance.config),
           });
-          // broadcast
-          ctx.meta.util.broadcastEmit({
-            module: 'a-instance',
-            broadcastName: 'resetCache',
-            data: null,
-          });
+          // changed
+          await this.instanceChanged(false);
         }
       }
 
@@ -241,11 +259,13 @@ module.exports = ctx => {
 };
 
 function ctxHostValid(ctx) {
+  // not check localhost, because almost inner api call use 127.0.0.1
   return (
     !ctx.innerAccess &&
     ctx.host &&
     ctx.protocol &&
-    !['127.0.0.1', 'localhost'].includes(ctx.host) &&
+    ctx.host.indexOf('127.0.0.1') === -1 &&
+    // ctx.host.indexOf('localhost') === -1 &&
     ['http', 'https'].includes(ctx.protocol)
   );
 }
@@ -750,10 +770,7 @@ module.exports = [
 /***/ }),
 
 /***/ 878:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const require3 = __webpack_require__(638);
-const extend = require3('extend2');
+/***/ ((module) => {
 
 const __blackFields = ['startups', 'queues', 'broadcasts', 'middlewares', 'schedules'];
 
@@ -770,28 +787,19 @@ module.exports = app => {
         title: data.title,
         config: JSON.stringify(this.__configBlackFields(data.config)),
       });
-      // broadcast
-      this.ctx.meta.util.broadcastEmit({
-        module: 'a-instance',
-        broadcastName: 'resetCache',
-        data: null,
-      });
+      // changed
+      await this.ctx.bean.instance.instanceChanged();
     }
 
     async getConfigsPreview() {
       const instance = await this.item();
-      let configPreview = extend(true, {}, app.meta.configs, JSON.parse(instance.config));
+      let configPreview = this.ctx.bean.util.extend({}, app.meta.configs, JSON.parse(instance.config));
       configPreview = this.__configBlackFields(configPreview);
       return { data: configPreview };
     }
 
     async reload() {
-      // broadcast
-      this.ctx.meta.util.broadcastEmit({
-        module: 'a-instance',
-        broadcastName: 'reload',
-        data: null,
-      });
+      await this.ctx.bean.instance.reload();
     }
 
     __configBlackFields(config) {

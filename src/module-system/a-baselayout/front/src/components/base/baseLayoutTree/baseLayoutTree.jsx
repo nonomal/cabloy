@@ -25,22 +25,22 @@ export default {
   methods: {
     async init() {
       // subnavbar
-      if (this.layoutConfig.subnavbar && this.layoutConfig.subnavbar.policyDefault) {
-        this.layoutManager.subnavbar_policyDefault();
-      }
-      // provider switch
-      const providerOptions = this.layoutConfig.providerOptions || {
+      await this.layoutManager.subnavbar_policyInit();
+      // provider
+      const res = await this.layoutManager.data_providerInit({
         providerName: 'tree',
-        autoInit: true,
-      };
-      const res = await this.layoutManager.data_providerSwitch(providerOptions);
+      });
       this.treeviewData = res.treeviewData;
       // instance
       await this.layoutManager.layout_setInstance(this);
     },
   },
   render() {
-    const blockName = this.layoutConfig.blockItems || 'items';
-    return <div>{this.layoutManager.layout_renderBlock({ blockName })}</div>;
+    const blockName = this.layoutConfig.options?.blockItems || 'items';
+    return (
+      <div class="eb-atom-list-layout eb-atom-list-layout-tree">
+        {this.layoutManager.layout_renderBlock({ blockName })}
+      </div>
+    );
   },
 };

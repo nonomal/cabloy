@@ -1,10 +1,11 @@
 export default {
   methods: {
     async onAction({ ctx, action /* , item*/ }) {
-      if (action.name === 'appearanceView') {
+      const actionName = action.actionName || action.name;
+      if (actionName === 'appearanceView') {
         const url = ctx.$meta.vueApp.layout === 'pc' ? '/a/user/view/pc' : '/a/user/view/mobile';
         ctx.$view.navigate(url, action.navigateOptions);
-      } else if (action.name === 'appearanceLanguage') {
+      } else if (actionName === 'appearanceLanguage') {
         const _action = {
           actionModule: 'a-base',
           actionComponent: 'action',
@@ -22,8 +23,16 @@ export default {
           });
           // locale
           ctx.$meta.util.setLocale(locale.value);
-          // confirm
-          await ctx.$view.dialog.confirm(ctx.$text('LocaleReloadConfirmText'));
+          // set current app language
+          const useStoreApp = await this.$meta.store.use('a/app/app');
+          await useStoreApp.setCurrent({ appLanguage: locale.value });
+          // // confirm
+          // let view = ctx.$view;
+          // if (!view) {
+          //   view = this.$meta.vueLayout.appMethods;
+          // }
+          // await view.dialog.confirm(ctx.$text('LocaleReloadConfirmText'));
+          // reload
           // this.$meta.vueApp.reload({ echo: false });
           window.location.reload();
         }

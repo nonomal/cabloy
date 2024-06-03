@@ -51,10 +51,23 @@ export default {
       return atomOrder;
     },
     _order_default_others() {
+      const atomClassBase = this.base.atomClassBase;
+      if (!this.order_list) {
+        const lineNo = atomClassBase?.fields?.mappings?.lineNo;
+        if (lineNo) {
+          return {
+            name: lineNo,
+            by: 'asc',
+            tableAlias: 'f',
+          };
+        }
+        return null;
+      }
       const item = this.order_list.find(item => item.default);
       if (item) return item;
+      const orderName = atomClassBase && atomClassBase.itemOnly ? 'updatedAt' : 'atomUpdatedAt';
       return {
-        name: 'atomUpdatedAt',
+        name: orderName,
         by: 'desc',
         tableAlias: '',
       };
@@ -96,6 +109,7 @@ export default {
       return '';
     },
     order_renderAction() {
+      if (!this.order_list || this.order_list.length === 0) return null;
       return (
         <eb-link
           iconF7="::sort"

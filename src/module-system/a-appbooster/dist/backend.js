@@ -73,7 +73,9 @@ module.exports = {};
 /***/ 327:
 /***/ ((module) => {
 
-module.exports = {};
+module.exports = {
+  DemoIsolateApp: 'Demo: Isolate App',
+};
 
 
 /***/ }),
@@ -82,7 +84,8 @@ module.exports = {};
 /***/ ((module) => {
 
 module.exports = {
-  Unclassified: '未分类',
+  Unclassified: '未归类',
+  DemoIsolateApp: '演示: 独立应用',
 };
 
 
@@ -121,8 +124,8 @@ module.exports = app => {
   const _app = {
     atomName: 'General',
     atomStaticKey: 'appGeneral',
-    atomRevision: 5,
-    atomCategoryId: 'General',
+    atomRevision: 9,
+    atomCategoryId: 'AppCategoryManagement',
     description: '',
     appIcon: '::radio-button-unchecked',
     appIsolate: false,
@@ -161,8 +164,8 @@ module.exports = app => {
   const _app = {
     atomName: 'System',
     atomStaticKey: 'appSystem',
-    atomRevision: 0,
-    atomCategoryId: 'System',
+    atomRevision: 2,
+    atomCategoryId: 'AppCategorySettings',
     description: '',
     appIcon: '::menu',
     appIsolate: false,
@@ -190,8 +193,8 @@ module.exports = app => {
   const _app = {
     atomName: 'Unclassified',
     atomStaticKey: 'appUnclassified',
-    atomRevision: 0,
-    atomCategoryId: 'System',
+    atomRevision: 1,
+    atomCategoryId: 'AppCategoryManagement',
     description: '',
     appIcon: '::info-circle',
     appIsolate: false,

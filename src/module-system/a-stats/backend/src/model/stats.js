@@ -1,8 +1,12 @@
-module.exports = app => {
-  class Stats extends app.meta.Model {
-    constructor(ctx) {
-      super(ctx, { table: 'aStats', options: { disableDeleted: true } });
-    }
+const moduleInfo = module.info;
+module.exports = class Stats extends module.meta.class.ModelCache {
+  constructor() {
+    super({
+      table: 'aStats',
+      options: {
+        disableDeleted: true,
+        cacheName: { module: moduleInfo.relativeName, name: 'modelStats' },
+      },
+    });
   }
-  return Stats;
 };

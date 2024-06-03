@@ -1,12 +1,9 @@
-const authFn = require('./config/passport/auth.js');
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  return {
-    auth: authFn,
-    validation: {
-      validators: {},
-      schemas,
-    },
-  };
+const auth = require('./meta/passport/auth.js');
+const schemas = require('./meta/validation/schemas.js');
+module.exports = {
+  auth,
+  validation: {
+    validators: {},
+    schemas,
+  },
 };

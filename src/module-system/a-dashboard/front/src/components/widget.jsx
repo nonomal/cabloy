@@ -16,7 +16,7 @@ export default {
       children.push(
         <widget-toolbar
           key="widget-toolbar"
-          staticClass="widget-toolbar"
+          class="widget-toolbar"
           widget={this.options}
           dragdropScene={this.dragdropScene}
           propsOnDragStart={this.onDragStart}
@@ -45,7 +45,7 @@ export default {
           },
         },
       ];
-      children.push(<span key="resize-handler" staticClass="resize-handler" {...{ directives }}></span>);
+      children.push(<span key="resize-handler" class="resize-handler" {...{ directives }}></span>);
     }
     // group/widget
     if (this.options.group) {
@@ -99,7 +99,7 @@ export default {
         children.push(
           <div
             key="errorMessage"
-            staticClass="widget-inner widget-inner-error"
+            class="widget-inner widget-inner-error"
             style={{ height: this.__getPropertyRealValue('height') }}
           >
             <div>{this.errorMessage}</div>
@@ -120,7 +120,7 @@ export default {
       large: this.__getPropertyRealValue('widthLarge'),
     };
     return (
-      <f7-col staticClass={this.__getClassName()} {...{ attrs }} {...{ props }}>
+      <f7-col class={this.__getClassName()} {...{ attrs }} {...{ props }}>
         {children}
       </f7-col>
     );
@@ -173,16 +173,11 @@ export default {
       // component
       const moduleName = this.resource.resourceConfig.module;
       const componentName = this.resource.resourceConfig.component;
-      const module = await this.$meta.module.use(moduleName);
-      let component = module.options.components[componentName];
+      const component = await this.$meta.module.useComponent(moduleName, componentName);
       if (!component) {
         this.__setErrorMessage(fullName);
         this.ready = false;
       } else {
-        // uses
-        await this.$meta.util.createComponentOptionsUses(component);
-        // create
-        component = this.$meta.util.createComponentOptions(component);
         this.$options.components[fullName] = component;
         this.__setErrorMessage(null);
         this.ready = true;
@@ -412,11 +407,11 @@ export default {
     },
     __getFullName(options) {
       let fullName = this.dashboard.__resourceFullName(options || this.options);
-      if (fullName === 'test-party:widgetSimpleChat') {
-        fullName = 'test-note:widgetSimpleChat';
+      if (fullName === 'test-note:widgetSimpleChat') {
+        fullName = 'test-party:widgetSimpleChat';
       }
-      if (fullName === 'a-dashboard:widgetAbout') {
-        fullName = 'test-note:widgetAbout';
+      if (fullName === 'a-dashboard:widgetAbout' || fullName === 'test-note:widgetAbout') {
+        fullName = 'test-party:widgetAbout';
       }
       return fullName;
     },

@@ -1,13 +1,19 @@
 <template>
   <eb-page>
-    <eb-navbar large largeTransparent :title="getPageTitle('New Authorizations')" eb-back-link="Back">
+    <eb-navbar eb-back-link="Back">
+      <f7-nav-title>
+        <div>{{ $text('New Authorizations') }}</div>
+        <div class="subtitle">
+          <f7-badge>{{ atomMain.atomNameLocale || atomMain.atomName }}</f7-badge>
+        </div>
+      </f7-nav-title>
       <f7-nav-right>
         <eb-link v-if="!!atoms" ref="buttonSubmit" iconF7="::save" :onPerform="onSave"></eb-link>
       </f7-nav-right>
     </eb-navbar>
     <eb-list form inline-labels no-hairlines-md @submit="onFormSubmit">
       <f7-list-item :title="$text('Resource Class')" link="#" @click="onSelectAtomClass">
-        <div slot="after">{{ atomClass && atomClass.title }}</div>
+        <div slot="after">{{ atomClass && atomClass.titleLocale }}</div>
       </f7-list-item>
       <eb-list-item v-if="atomClass">
         <div slot="after">
@@ -24,14 +30,20 @@
   </eb-page>
 </template>
 <script>
-import roleItemBase from '../../components/role/roleItemBase.js';
+import Vue from 'vue';
+const ebPageContext = Vue.prototype.$meta.module.get('a-components').options.mixins.ebPageContext;
 export default {
-  mixins: [roleItemBase],
+  mixins: [ebPageContext],
   data() {
     return {
       atomClass: null,
       atoms: null,
     };
+  },
+  computed: {
+    atomMain() {
+      return this.contextParams.atomMain;
+    },
   },
   watch: {
     atomClass() {
@@ -43,14 +55,16 @@ export default {
       this.$refs.buttonSubmit.onClick();
     },
     onSelectAtomClass() {
-      this.$view.navigate('/a/basefront/atom/selectAtomClass', {
+      this.$view.navigate('/a/basefront2/atom/selectAtomClass', {
         target: '_self',
         context: {
           params: {
-            atomClass: this.atomClass,
+            selectedAtomClass: this.atomClass,
             optional: true,
-            resource: true,
-            inner: null,
+            check: {
+              itemOnly: false,
+              resource: true,
+            },
           },
           callback: (code, data) => {
             if (code === 200) {
@@ -81,11 +95,32 @@ export default {
     },
     async onSave() {
       if (!this.atoms) return;
+      // key
+      const key = {
+        atomId: this.atomMain.atomId,
+      };
+      // add
       await this.$api.post('resourceRight/add', {
-        key: this.roleKey,
+        key,
         atomIds: this.atoms.map(item => item.atomId),
       });
-      this.$meta.eventHub.$emit('resourceRight:add', { roleId: this.roleId });
+      // event
+      this.$meta.eventHub.$emit('atom:action', {
+        key: null,
+        atomClass: {
+          module: 'a-base',
+          atomClassName: 'roleResourceRight',
+        },
+        action: {
+          name: 'create',
+        },
+        atom: {
+          atomStage: 1,
+          module: 'a-base',
+          atomClassName: 'roleResourceRight',
+        },
+      });
+      // back
       this.$f7router.back();
     },
     getTypeCategory(item) {

@@ -1,48 +1,15 @@
+import Actions from './item_actions.jsx';
+import ContextMenu from './item_contextMenu.jsx';
+import CommonItem from '../../common/item.jsx';
+
 export default {
+  mixins: [Actions, ContextMenu, CommonItem],
   methods: {
-    async item_onAction(event, item, action) {
-      const _action = this.getAction(action);
-      if (!_action) return;
-      await this.$meta.util.performAction({ ctx: this, action: _action, item });
-      this.$meta.util.swipeoutClose(event.currentTarget);
-    },
-    async item_onActionView(event, item) {
-      return await this.item_onAction(event, item, {
-        module: item.module,
-        atomClassName: item.atomClassName,
-        name: 'read',
-      });
-    },
-    item_getAtomName(item) {
-      return item.atomNameLocale || item.atomName;
-    },
-    item_getMetaMedia(item, avatarFieldName) {
-      let media;
-      if (!avatarFieldName) {
-        media = (item._meta && item._meta.media) || item.avatar;
-      } else {
-        media = item[avatarFieldName];
-      }
-      if (!media) {
-        media = this.$meta.config.modules['a-base'].user.avatar.default;
-      }
-      return this.$meta.util.combineImageUrl(media, 24);
-    },
-    item_getMetaMediaLabel(item) {
-      const mediaLabel = (item._meta && item._meta.mediaLabel) || item.userName;
-      return mediaLabel;
-    },
     item_getMetaSummary(item) {
       const arr = [];
       // atomClass
       if (!this.container.atomClass) {
-        const atomClass = this.getAtomClass({
-          module: item.module,
-          atomClassName: item.atomClassName,
-        });
-        if (atomClass) {
-          arr.push(atomClass.titleLocale);
-        }
+        arr.push(item.atomClassTitleLocale);
       }
       // resourceType
       const resourceType = item.resourceTypeLocale;
@@ -50,8 +17,9 @@ export default {
         arr.push(resourceType);
       }
       // atomCategoryName
+      const formCategory = this.$meta.util.getProperty(this.filter.data, 'form.category');
       const atomCategoryName = item.atomCategoryNameLocale || item.atomCategoryName;
-      if (atomCategoryName) {
+      if (!formCategory && atomCategoryName) {
         arr.push(atomCategoryName);
       }
       // summary
@@ -71,92 +39,24 @@ export default {
       if (!this.base_userLabels) return null;
       return this.base_userLabels[id];
     },
-    item_getActionColor(action, index) {
-      if (index === 0) return 'orange';
-      else if (index === 1) return 'red';
-      return 'blue';
+    item_renderMedia(item, className, mediaFieldName) {
+      return <img class={className || 'avatar avatar24'} src={this.item_getMetaMedia(item, mediaFieldName)} />;
     },
-    item_getActionTitle(action, item) {
-      return this.getActionTitle(action, item);
-    },
-    item_renderContextMenu(item, mode) {
-      // domLeft
-      let domLeft;
-      if (item && item.atomStage === 1) {
-        // star
-        let domLeftStarTitle;
-        if (mode === 'menu' || (!mode && this.$device.desktop)) {
-          domLeftStarTitle = <div slot="title">{this.$text(item.star ? 'Unstar' : 'UserStar')}</div>;
-        }
-        const domLeftStar = (
-          <div color="teal" propsOnPerform={event => this.star_onSwitch(event, item)}>
-            <f7-icon
-              slot="media"
-              color={item.star ? 'orange' : ''}
-              f7={item.star ? '::star' : ':outline:star-outline'}
-            ></f7-icon>
-            {domLeftStarTitle}
-          </div>
-        );
-        // label
-        let domLeftLabelTitle;
-        if (mode === 'menu' || (!mode && this.$device.desktop)) {
-          domLeftLabelTitle = <div slot="title">{this.$text('UserLabels')}</div>;
-        }
-        const domLeftLabel = (
-          <div color="blue" propsOnPerform={event => this.labels_onClick(event, item)}>
-            <f7-icon slot="media" f7=":outline:label-outline"></f7-icon>
-            {domLeftLabelTitle}
-          </div>
-        );
-        domLeft = (
-          <div slot="left">
-            {domLeftStar}
-            {domLeftLabel}
-          </div>
-        );
+    item_renderMedia2(info, className, media) {
+      const item = info.item || info.record;
+      if (media === false) return null;
+      let domMedia;
+      if (media === '_index') {
+        const text = `#${info.index + 1}`;
+        domMedia = <div>{text}</div>;
+      } else if (media === '_indexTotal') {
+        const text = `#${info.indexTotal + 1}`;
+        domMedia = <div>{text}</div>;
+      } else {
+        const mediaFieldName = media === true ? undefined : media;
+        domMedia = this.item_renderMedia(item, className, mediaFieldName);
       }
-      // domRight
-      const domActions = [];
-      if (item && item._actions) {
-        for (let index in item._actions) {
-          index = parseInt(index);
-          const action = item._actions[index];
-          const _action = this.getAction(action);
-          let domActionTitle;
-          if (mode === 'menu' || (!mode && this.$device.desktop)) {
-            domActionTitle = <div slot="title">{this.item_getActionTitle(action, item)}</div>;
-          }
-          domActions.push(
-            <div
-              key={action.id}
-              color={this.item_getActionColor(action, index)}
-              propsOnPerform={event => this.item_onAction(event, item, action)}
-            >
-              <f7-icon
-                slot="media"
-                material={_action.icon && _action.icon.material}
-                f7={_action.icon && _action.icon.f7}
-              ></f7-icon>
-              {domActionTitle}
-            </div>
-          );
-        }
-      }
-      const domRight = (
-        <div slot="right" ready={item && !!item._actions}>
-          {domActions}
-        </div>
-      );
-      return (
-        <eb-context-menu mode={mode}>
-          {domLeft}
-          {domRight}
-        </eb-context-menu>
-      );
-    },
-    item_renderMedia(item, className, avatarFieldName) {
-      return <img class={className || 'avatar avatar24'} src={this.item_getMetaMedia(item, avatarFieldName)} />;
+      return domMedia;
     },
     item_renderStats(item) {
       const children = [];
@@ -193,15 +93,47 @@ export default {
       }
       return children;
     },
-    item_renderMetaFlags(item) {
-      const domMetaFlags = [];
-      // flow
-      if (item.flowNodeNameCurrentLocale) {
-        domMetaFlags.push(
-          <f7-badge key="flowNodeNameCurrent" color="orange">
-            {item.flowNodeNameCurrentLocale}
+    item_getAtomStateColor(item) {
+      const atomState = String(item.atomState);
+      if (['-1'].includes(atomState)) return 'teal';
+      if (['-2', '-3'].includes(atomState)) return 'gray';
+      return 'orange';
+    },
+    item_renderAtomClosed(item) {
+      if (item.atomClosed) {
+        const color = this.item_getAtomStateColor(item);
+        return (
+          <f7-badge key="_atomClosed" color={color}>
+            {this.$text('Closed')}
           </f7-badge>
         );
+      }
+      return null;
+    },
+    item_renderFlowNodeState(item) {
+      // ignore 0/'0'
+      // eslint-disable-next-line
+      if (item.atomState != 0 && item._atomStateTitleLocale) {
+        const color = this.item_getAtomStateColor(item);
+        return (
+          <f7-badge key="_atomStateTitleLocale" color={color}>
+            {item._atomStateTitleLocale}
+          </f7-badge>
+        );
+      }
+      return null;
+    },
+    item_renderMetaFlags(item) {
+      const domMetaFlags = [];
+      // // atomClosed
+      // const domAtomClosed = this.item_renderAtomClosed(item);
+      // if (domAtomClosed) {
+      //   domMetaFlags.push(domAtomClosed);
+      // }
+      // flow
+      const domFlowNodeState = this.item_renderFlowNodeState(item);
+      if (domFlowNodeState) {
+        domMetaFlags.push(domFlowNodeState);
       }
       // flags
       const itemFlags = this.item_getMetaFlags(item);
@@ -217,7 +149,7 @@ export default {
           const _label = this.item_getLabel(label);
           domLabels.push(
             <f7-badge key={label} style={{ backgroundColor: _label.color }}>
-              {_label.text}
+              {(_label.text || '')[0]}
             </f7-badge>
           );
         }

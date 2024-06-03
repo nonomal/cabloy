@@ -29,10 +29,14 @@ module.exports = context => {
           loader: 'url-loader',
           options: {
             limit: false,
+            esModule: false,
             name(file) {
               return tools.combineSvgFileName(file);
             },
-            esModule: false,
+            publicPath(url) {
+              // '' means publicPath
+              return '' + url;
+            },
           },
         },
         {
@@ -64,6 +68,17 @@ module.exports = context => {
             limit: false,
             name(file) {
               return tools.combineHashFileName(file, 'file');
+            },
+            esModule: false,
+          },
+        },
+        {
+          test: /\.(wasm)(\?.*)?$/,
+          loader: 'url-loader',
+          options: {
+            limit: false,
+            name(file) {
+              return tools.combineHashFileName(file, 'wasm');
             },
             esModule: false,
           },

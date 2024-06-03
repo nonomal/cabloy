@@ -1,10 +1,8 @@
 {
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json",
   "version": "independent",
-  "packages": ["src/module/*", "src/module-vendor/*", "src/suite/*/modules/*", "src/suite-vendor/*/modules/*"],
+  "npmClient": "pnpm",
   "command": {
-    "bootstrap": {
-      "hoist": "**"
-    },
     "publish": {
       "ignoreChanges": ["src/module-vendor/**", "src/suite-vendor/**"]
     }

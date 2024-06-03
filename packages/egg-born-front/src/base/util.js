@@ -3,10 +3,10 @@ import moment from 'moment';
 import * as uuid from 'uuid';
 import cookies from 'js-cookie';
 import queue from 'async/queue';
+import debounce from '@zhennann/debounce';
+import currency from '@zhennann/currency';
 import extend from '@zhennann/extend';
-import sandboxFn from './sandbox.js';
-import screenfull from './screenfull.jsx';
-import visibilityChange from './visibilityChange.jsx';
+import cascadeExtend from 'cascade-extend';
 import requirejsFn from './requirejs.js';
 // eslint-disable-next-line
 import localeZhcn from 'moment/locale/zh-cn.js';
@@ -45,38 +45,6 @@ export default function (Vue) {
       Object.keys(window.localStorage).forEach(key => {
         if (key.indexOf('f7router-') === 0) window.localStorage.removeItem(key);
       });
-    },
-    async createComponentOptionsUses(component) {
-      if (!component.uses) return;
-      let uses = component.uses;
-      if (!Array.isArray(uses)) uses = uses.split(',');
-      const promises = uses.map(use => Vue.prototype.$meta.module.use(use));
-      await Promise.all(promises);
-    },
-    createComponentOptions(component) {
-      // installFactory
-      if (component.installFactory) {
-        component = Vue.util.mergeOptions(component, component.installFactory(Vue));
-        component._Ctor = {};
-        delete component.installFactory;
-        Vue.extend(component);
-        this._setComponentGlobal(component);
-      }
-      return component;
-    },
-    _setComponentGlobal(component) {
-      // register
-      if (component.meta && component.meta.global === true) {
-        if (!Vue.options.components[component.name]) {
-          Vue.component(component.name, component);
-        }
-      }
-      return component;
-    },
-    _setComponentModule(component, module) {
-      if (component) {
-        component.__ebModuleRelativeName = module.info.relativeName;
-      }
     },
     _locationFullPathName() {
       return location.origin + location.pathname;
@@ -118,16 +86,6 @@ export default function (Vue) {
           reslove();
         }, ms);
       });
-    },
-    debounce(func, wait) {
-      let i = 0;
-      return function (...args) {
-        const ctx = this;
-        if (i !== 0) window.clearTimeout(i);
-        i = window.setTimeout(() => {
-          func.apply(ctx, args);
-        }, wait);
-      };
     },
     nextId(scene) {
       scene = scene || 'default';
@@ -236,12 +194,21 @@ export default function (Vue) {
       const moduleInfo = typeof moduleName === 'string' ? mparse.parseInfo(moduleName) : moduleName;
       return `/${moduleInfo.url}/${arg}`;
     },
+    async createComponentInstanceByName(params, options) {
+      const module = await Vue.prototype.$meta.module.use(params.module);
+      const component = module.options.components[params.name];
+      if (!component) throw new Error(`component not found: ${params.module}:${params.name}`);
+      return this.createComponentInstance(component, options);
+    },
     createComponentInstance(component, options) {
       if (!component) throw new Error('component should not be null');
       // const _component = Object.assign({}, component, options);
       let _component = this.extend({}, component);
       _component = Object.assign(_component, options);
-      return new Vue(_component);
+      const instance = new Vue(_component);
+      instance.$store = Vue.prototype.$meta.store;
+      instance.$pinia = Vue.prototype.$meta.pinia;
+      return instance;
     },
     _combineComponentsProps(parent, component) {
       if (component.mixins) {
@@ -253,11 +220,16 @@ export default function (Vue) {
     },
     async performAction(args) {
       const { ctx, action, item } = args;
+      let actionModule = action.actionModule;
+      const actionComponent = action.actionComponent;
+      const actionPath = action.actionPath;
+      // patch
+      if (actionModule === 'a-base' && (actionComponent === 'action' || actionComponent === 'actionBulk')) {
+        actionModule = 'a-baseaction';
+      }
       // actionPath
-      if (!action.actionComponent) {
-        const url = action.actionPath
-          ? this.combinePagePath(action.actionModule, this.replaceTemplate(action.actionPath, item))
-          : null;
+      if (!actionComponent) {
+        const url = actionPath ? this.combinePagePath(actionModule, this.replaceTemplate(actionPath, item)) : null;
         const options = Object.assign({}, action.navigateOptions, {
           context: {
             params: {
@@ -269,9 +241,9 @@ export default function (Vue) {
         return;
       }
       // actionComponent
-      const module = await Vue.prototype.$meta.module.use(action.actionModule);
-      const component = module.options.components[action.actionComponent];
-      if (!component) throw new Error(`actionComponent not found: ${action.actionModule}:${action.actionComponent}`);
+      const module = await Vue.prototype.$meta.module.use(actionModule);
+      const component = module.options.components[actionComponent];
+      if (!component) throw new Error(`actionComponent not found: ${actionModule}:${actionComponent}`);
       // componentProps
       const componentProps = {};
       this._combineComponentsProps(componentProps, component);
@@ -286,6 +258,9 @@ export default function (Vue) {
       // create instance
       const componentInstance = this.createComponentInstance(component, options);
       try {
+        if (window.__debugger && Vue.prototype.$meta.config.env === 'development') {
+          debugger;
+        }
         const res = await componentInstance.onAction(args);
         componentInstance.$destroy();
         return res;
@@ -296,12 +271,14 @@ export default function (Vue) {
     },
     performActionSync(args) {
       const { action } = args;
+      const actionModule = action.actionModule;
+      const actionComponent = action.actionComponent;
       // actionComponent
       //  should load module before the call
-      const module = Vue.prototype.$meta.module.get(action.actionModule);
-      if (!module) throw new Error(`actionModule not found: ${action.actionModule}:${action.actionComponent}`);
-      const component = module.options.components[action.actionComponent];
-      if (!component) throw new Error(`actionComponent not found: ${action.actionModule}:${action.actionComponent}`);
+      const module = Vue.prototype.$meta.module.get(actionModule);
+      if (!module) throw new Error(`actionModule not found: ${actionModule}`);
+      const component = module.options.components[actionComponent];
+      if (!component) throw new Error(`actionComponent not found: ${actionModule}:${actionComponent}`);
       // componentProps
       const componentProps = {};
       this._combineComponentsProps(componentProps, component);
@@ -316,6 +293,9 @@ export default function (Vue) {
       // create instance
       const componentInstance = this.createComponentInstance(component, options);
       try {
+        if (window.__debugger && Vue.prototype.$meta.config.env === 'development') {
+          debugger;
+        }
         const res = componentInstance.onAction(args);
         componentInstance.$destroy();
         return res;
@@ -385,9 +365,14 @@ export default function (Vue) {
       const locale = this.getLocale();
       return `https://store.cabloy.com/${locale === 'zh-cn' ? 'zh-cn/' : ''}articles/${entityName}.html`;
     },
+    combineAvatarUrl(url, width, height) {
+      const media = url || Vue.prototype.$meta.config.modules['a-base'].user.avatar.default;
+      return this.combineImageUrl(media, width, height);
+    },
     combineImageUrl(url, width, height) {
       if (!url) return url;
       if (url.indexOf('data:image/') === 0) return url;
+      if (url[0] === ':') return url; // maybe svg icon
       if (!width && !height) return url;
       const pixelRatio = Vue.prototype.$device.pixelRatio;
       let query = '';
@@ -395,20 +380,25 @@ export default function (Vue) {
       if (height) query = `${query ? query + '&' : ''}height=${parseInt(height) * pixelRatio}`;
       return `${url}${url.charAt(url.length - 1) === '?' ? '' : '?'}${query}`;
     },
-    combineQueries(url, queries) {
-      //
-      if (!queries) return url;
-      //
+    combineParams(params) {
+      if (!params) return '';
       let str = '';
-      for (const key of Object.keys(queries)) {
-        const value = queries[key];
+      for (const key of Object.keys(params)) {
+        const value = params[key];
         if (value !== null && value !== undefined) {
           str += `${key}=${encodeURIComponent(value)}&`;
         }
       }
       if (str) {
-        str = str.substr(0, str.length - 1);
+        str = str.substring(0, str.length - 1);
       }
+      return str;
+    },
+    combineQueries(url, queries) {
+      //
+      if (!queries) return url;
+      //
+      const str = this.combineParams(queries);
       if (!str) return url;
       //
       if (!url) return '?' + str;
@@ -588,34 +578,72 @@ export default function (Vue) {
         }
       }
     },
+    combineSearchClauseProperty({
+      ctx,
+      dataKey,
+      property,
+      operator,
+      value,
+      key,
+      dataPath,
+      schema,
+      data,
+      searchStates,
+    }) {
+      // ebSearch
+      const ebSearch = property.ebSearch;
+      if (ebSearch === false) return null;
+      // combine
+      let actionCombine = ebSearch && ebSearch.combine;
+      if (!actionCombine && property.ebType === 'dict') {
+        actionCombine = {
+          actionModule: 'a-basefront',
+          actionComponent: 'combineSearch',
+          name: 'dict',
+        };
+      }
+      let res;
+      if (actionCombine) {
+        res = this.performActionSync({
+          ctx,
+          action: actionCombine,
+          item: { key, dataKey, property, dataPath, value, operator, schema, data, searchStates },
+        });
+      } else {
+        res = this._combineSearchClause({ key, dataKey, property, value, operator });
+      }
+      return res;
+    },
     combineSearchClause({ ctx, schema, data, searchStates }) {
       if (!schema || !data) return null;
       const clause = {};
       const properties = schema.schema.properties;
       for (const key in properties) {
         const property = properties[key];
-        const ebSearch = property.ebSearch;
-        if (ebSearch === false) continue;
         // dataPath
         const dataPath = key;
-        // value
-        const value = data[key];
         // operator
         const operator = this._combineSearchParseOperator({
           property,
           operator: searchStates && searchStates[dataPath],
         });
+        // dataKey
+        const dataKey = property.ebDataKey || key;
+        // value
+        const value = data[dataKey];
         // combine
-        let res;
-        if (ebSearch && ebSearch.combine) {
-          res = this.performActionSync({
-            ctx,
-            action: ebSearch.combine,
-            item: { key, property, dataPath, value, operator, schema, data, searchStates },
-          });
-        } else {
-          res = this._combineSearchClause({ key, property, value, operator });
-        }
+        const res = this.combineSearchClauseProperty({
+          ctx,
+          dataKey,
+          property,
+          operator,
+          value,
+          key,
+          dataPath,
+          schema,
+          data,
+          searchStates,
+        });
         if (res) {
           Object.assign(clause, res);
         }
@@ -635,14 +663,14 @@ export default function (Vue) {
       }
       return { op };
     },
-    _combineSearchClause({ key, property, value, operator }) {
+    _combineSearchClause({ /* key,*/ dataKey, property, value, operator }) {
       const ebSearch = property.ebSearch;
       if (!property.type) return null;
       if (this.checkIfEmptyForSelect(value)) return null;
       if (ebSearch && ebSearch.ignoreValue === value) return null;
       let tableAlias = ebSearch && ebSearch.tableAlias;
       tableAlias = tableAlias === null ? null : tableAlias || 'f';
-      const fieldName = (ebSearch && ebSearch.fieldName) || key;
+      const fieldName = (ebSearch && ebSearch.fieldName) || dataKey;
       const clauseName = tableAlias === null ? fieldName : `${tableAlias}.${fieldName}`;
       const clauseValue = {
         op: operator.op,
@@ -655,10 +683,13 @@ export default function (Vue) {
     },
     _checkIfIconF7Default(iconF7) {
       if (!iconF7) return true;
-      return iconF7.indexOf('/api/static/') === -1 && iconF7.split(':').length < 3;
+      if (iconF7.indexOf('https://') === 0 || iconF7.indexOf('http://') === 0) return false;
+      return iconF7.indexOf('static/') === -1 && iconF7.split(':').length < 3;
+      // return iconF7.indexOf('/api/static/') === -1 && iconF7.split(':').length < 3;
     },
     async combineIcon({ material, f7, color, size }) {
-      return await Vue.prototype.$meta.store.dispatch('a/icon/combineIcon', { material, icon: f7, color, size });
+      const useStoreIcon = await Vue.prototype.$meta.store.use('a/icon/icon');
+      return await useStoreIcon.combineIcon({ material, icon: f7, color, size });
     },
     getJwtAuthorization() {
       let oauth = window.localStorage['eb-jwt-oauth'];
@@ -686,6 +717,48 @@ export default function (Vue) {
     compareViewSize(sizeA, sizeB) {
       return __ViewSizes.indexOf(sizeA) - __ViewSizes.indexOf(sizeB);
     },
+    get emptyIcon() {
+      return '<i class="icon"></i>';
+    },
+    replaceItem(itemDest, itemSrc) {
+      if (!itemDest) return itemSrc;
+      const keys = Object.keys(itemDest);
+      Object.assign(itemDest, itemSrc);
+      for (const key of keys) {
+        if (itemSrc[key] === undefined) {
+          itemDest[key] = undefined;
+        }
+      }
+      return itemDest;
+    },
+    stageToString(stage) {
+      if (stage === undefined || stage === null) return stage;
+      if (typeof stage === 'string') return stage;
+      return stage === 0 ? 'draft' : stage === 1 ? 'formal' : 'history';
+    },
+    patchF7ExtendOptions(extendOptions, propsRemove) {
+      if (!propsRemove) return extendOptions;
+      if (!Array.isArray(propsRemove)) {
+        propsRemove = propsRemove.split(',');
+      }
+      const props = { ...extendOptions.props };
+      for (const propRemove of propsRemove) {
+        delete props[propRemove];
+      }
+      const res = { ...extendOptions, props };
+      delete res._Ctor;
+      delete res.name;
+      return res;
+    },
+    parseIdSafe(id) {
+      if (!id) return 0;
+      if (!isNaN(id)) return parseInt(id);
+      return this.parseTokenSafe(id);
+    },
+    parseTokenSafe(token) {
+      if (!token) return token;
+      return token.replace(/[\\\.*#%'"`;, ]/g, '');
+    },
   };
 
   // moment
@@ -704,22 +777,20 @@ export default function (Vue) {
 
   // mixin
   Object.assign(util, {
-    sandbox: sandboxFn(Vue),
     moment,
     uuid,
     queue,
     cookies,
+    debounce,
+    currency,
     extend(...args) {
       return extend(true, ...args);
     },
+    cascadeExtend,
     escapeHtml: _escape.escapeHtml,
     escapeURL: _escape.escapeURL,
     hostUtil: hostUtil(Vue, util),
   });
-  // screenfull
-  util.screenfull = util.createComponentInstance(screenfull);
-  // visibilityChange
-  util.visibilityChange = util.createComponentInstance(visibilityChange);
 
   // // test:
   // window.setTimeout(() => {

@@ -1,9 +1,12 @@
 const BeanModuleCaches = Symbol('BEAN#__BeanModuleCaches');
 
 class BeanModuleBase {
-  constructor(ctx, beanClassName) {
-    this.__ctx = ctx;
-    this.__beanClassName = beanClassName;
+  constructor(moduleName) {
+    this.__moduleName = moduleName;
+  }
+
+  get moduleName() {
+    return this.__moduleName || this.ctx.module.info.relativeName;
   }
 
   // other module's bean
@@ -11,7 +14,7 @@ class BeanModuleBase {
     if (!this[BeanModuleCaches]) this[BeanModuleCaches] = new Map();
     let beanInstance = this[BeanModuleCaches].get(moduleName);
     if (!beanInstance) {
-      beanInstance = this.__ctx.bean._newBean(this.__beanClassName, moduleName);
+      beanInstance = this.ctx.bean._newBean(this.__beanFullName__, moduleName);
       this[BeanModuleCaches].set(moduleName, beanInstance);
     }
     return beanInstance;

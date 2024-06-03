@@ -36,8 +36,11 @@ export default {
       this.contextCallback(200, node);
       this.$f7router.back();
     },
-    onCodeMatchClick(codeMatch) {
-      this.$refs.tree.selectDictItem(codeMatch.code);
+    onDictClearSelected() {
+      this.onDictItemClick(null);
+    },
+    async onCodeMatchClick(codeMatch) {
+      await this.$refs.tree.selectDictItem(codeMatch.code);
     },
   },
   render() {
@@ -55,6 +58,7 @@ export default {
           leafOnly={this.leafOnly}
           selectedCodes={this.selectedCodes}
           onDictItemClick={this.onDictItemClick}
+          onDictClearSelected={this.onDictClearSelected}
         ></dictSelect>
         <dictFilterSheet ref="sheet" dict={this.dict} onCodeMatchClick={this.onCodeMatchClick}></dictFilterSheet>
       </eb-search-page>

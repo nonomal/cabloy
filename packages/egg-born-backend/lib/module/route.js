@@ -1,5 +1,5 @@
 const is = require('is-type-of');
-const extend = require('extend2');
+const extend = require('@zhennann/extend');
 const pathMatching = require('egg-path-matching');
 const loadMiddlewares = require('./middleware.js');
 const MWSTATUS = Symbol('Context#__wmstatus');
@@ -57,9 +57,24 @@ module.exports = function (loader, modules) {
           ctx.route = _route;
           // dynamic options
           ctx.meta.middlewares = {};
+          // getMiddlewareOptions
+          ctx.meta.getMiddlewareOptions = function (middlewareName) {
+            const item = ebMiddlewaresNormal[middlewareName];
+            // config options
+            const config = ctx.config.module(item.module);
+            const optionsConfig = config.middlewares ? config.middlewares[item.name] : null;
+            // route options
+            const optionsRoute = route.meta ? route.meta[item.name] : null;
+            // dynamic options
+            const optionsDynamic = ctx.meta.middlewares[item.name];
+            // final options
+            const options = extend(true, {}, optionsConfig, optionsRoute, optionsDynamic);
+            // ok
+            return options;
+          };
           // next
           await next();
-          // invoke callbackes
+          // invoke callbackes: handle secondly
           await ctx.tailDone();
         };
         fnStart._name = 'start';
@@ -67,8 +82,18 @@ module.exports = function (loader, modules) {
 
         // middlewares: globals
         ebMiddlewaresGlobal.forEach(item => {
-          args.push(wrapMiddleware(item, route));
+          args.push(wrapMiddleware(item));
         });
+
+        // middlewares: tailDone
+        const fnTailDone = async (ctx, next) => {
+          // next
+          await next();
+          // invoke callbackes: handle firstly
+          await ctx.tailDone();
+        };
+        fnStart._name = 'tailDone';
+        args.push(fnTailDone);
 
         // middlewares: route
         if (route.middlewares) {
@@ -78,7 +103,7 @@ module.exports = function (loader, modules) {
             if (is.string(key)) {
               const item = ebMiddlewaresNormal[key];
               if (item) {
-                args.push(wrapMiddleware(item, route));
+                args.push(wrapMiddleware(item));
               } else {
                 args.push(wrapMiddlewareApp(key, route, loader));
               }
@@ -137,16 +162,10 @@ function wrapMiddlewareApp(key, route, loader) {
   }
 }
 
-function wrapMiddleware(item, route) {
-  const optionsRoute = route.meta ? route.meta[item.name] : null;
+function wrapMiddleware(item) {
   const fn = (ctx, next) => {
-    // config options
-    const config = ctx.config.module(item.module);
-    const optionsConfig = config.middlewares ? config.middlewares[item.name] : null;
-    // dynamic options
-    const optionsDynamic = ctx.meta.middlewares[item.name];
-    // final options
-    const options = extend(true, {}, optionsConfig, optionsRoute, optionsDynamic);
+    // options
+    const options = ctx.meta.getMiddlewareOptions(item.name);
     // enable match ignore dependencies
     if (options.enable === false || !middlewareMatch(ctx, options) || !middlewareDeps(ctx, options)) {
       ctx[MWSTATUS][item.name] = false;
@@ -155,7 +174,11 @@ function wrapMiddleware(item, route) {
     // bean
     const bean = item.bean;
     // execute
-    const beanInstance = ctx.bean._getBean(bean.module, `middleware.${bean.name}`);
+    const beanFullName = `${bean.module}.middleware.${bean.name}`;
+    const beanInstance = ctx.bean._getBean(beanFullName);
+    if (!beanInstance) {
+      throw new Error(`middleware bean not found: ${beanFullName}`);
+    }
     return beanInstance.execute(options, next);
   };
   fn._name = item.name;
@@ -179,6 +202,9 @@ function middlewareDeps(ctx, options) {
 function methodToMiddleware(controllerBeanFullName, _route) {
   return function classControllerMiddleware(...args) {
     const controller = this.bean._getBean(controllerBeanFullName);
+    if (!controller) {
+      throw new Error(`controller not found: ${controllerBeanFullName}`);
+    }
     if (!controller[_route.action]) {
       throw new Error(`controller action not found: ${controllerBeanFullName}.${_route.action}`);
     }

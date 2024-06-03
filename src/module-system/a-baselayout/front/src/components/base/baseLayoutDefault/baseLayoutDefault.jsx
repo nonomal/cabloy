@@ -22,15 +22,37 @@ export default {
   methods: {
     async init() {
       // subnavbar
-      if (this.layoutConfig.subnavbar && this.layoutConfig.subnavbar.policyDefault) {
-        this.layoutManager.subnavbar_policyDefault();
-      }
+      await this.layoutManager.subnavbar_policyInit();
+      // provider
+      await this.layoutManager.data_providerInit({
+        providerName: 'item',
+      });
       // instance
       await this.layoutManager.layout_setInstance(this);
     },
   },
   render() {
-    const blockName = this.layoutConfig.blockMain || 'main';
-    return <div>{this.layoutManager.layout_renderBlock({ blockName })}</div>;
+    let domMainBefore;
+    if (this.layoutConfig.blocks.mainBefore) {
+      domMainBefore = this.layoutManager.layout_renderBlock({
+        blockName: 'mainBefore',
+      });
+    }
+    const domMain = this.layoutManager.layout_renderBlock({
+      blockName: 'main',
+    });
+    let domMainAfter;
+    if (this.layoutConfig.blocks.mainAfter) {
+      domMainAfter = this.layoutManager.layout_renderBlock({
+        blockName: 'mainAfter',
+      });
+    }
+    return (
+      <div class="eb-atom-item-layout eb-atom-item-layout-default">
+        {domMainBefore}
+        {domMain}
+        {domMainAfter}
+      </div>
+    );
   },
 };

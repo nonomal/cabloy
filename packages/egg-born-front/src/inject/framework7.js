@@ -1,4 +1,4 @@
-import App from './pages/app.vue';
+import App from './pages/app.jsx';
 import routes from './routes.js';
 import patchDevice from './patch/device.js';
 import patchRouter from './patch/router.js';
@@ -23,11 +23,15 @@ export default function (Vue, options, cb) {
       el: '#app',
       render: c => c('app', { ref: 'app' }),
       store: Vue.prototype.$meta.store,
+      pinia: Vue.prototype.$meta.pinia,
       framework7: {
         theme: 'md',
         modal: {
           moveToRoot: false,
           queueDialogs: false,
+        },
+        notification: {
+          closeOthersOnOpen: false,
         },
         calendar: {
           routableModals: false,

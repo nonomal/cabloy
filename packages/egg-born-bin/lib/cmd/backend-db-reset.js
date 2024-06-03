@@ -3,7 +3,6 @@ const chalk = require('chalk');
 const mock = require('egg-mock');
 const TestCommand = require('@zhennann/egg-bin').TestCommand;
 const utils = require('../utils.js');
-const eventAppReady = 'eb:event:appReady';
 
 class BackendDbResetCommand extends TestCommand {
   constructor(rawArgv) {
@@ -35,19 +34,11 @@ class BackendDbResetCommand extends TestCommand {
     yield app.ready();
 
     // check app ready
-    yield this.checkAppReady(app);
+    yield app.meta.checkAppReady();
 
     // done
     console.log(chalk.cyan('  backend-db-reset successfully!'));
     process.exit(0);
-  }
-
-  checkAppReady(app) {
-    return new Promise((resolve, reject) => {
-      app.on(eventAppReady, () => {
-        resolve();
-      });
-    });
   }
 
   description() {

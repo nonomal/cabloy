@@ -4,11 +4,11 @@ const enquirer = require('enquirer');
 const uuid = require('uuid');
 const eggBornUtils = require('egg-born-utils');
 const BaseCommand = require('@zhennann/common-bin');
-const IOFn = require('@zhennann/socketio').default;
+const SocketIO = require('@zhennann/socketio').default;
 const AdapterFn = require('../adapter.js');
 
-const __debounceTimeout = 500;
 const __envFields = ['TERM', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'SHELL', 'COLOR', 'LANG', 'npm_config_registry'];
+const __comment_seperator = '====================================================================';
 
 class CliCommand extends BaseCommand {
   constructor(rawArgv, { meta, argv, openAuthClient }) {
@@ -44,6 +44,8 @@ class CliCommand extends BaseCommand {
     const progressId = uuid.v4().replace(/-/g, '');
     // progressbar
     yield this._progressbar({ progressId, context });
+    // done: log cli docs
+    this._logCliDocs();
     // done
     console.log(chalk.cyan('\n  cli successfully!\n'));
   }
@@ -54,15 +56,34 @@ class CliCommand extends BaseCommand {
     this.cabloyConfig = this.__cabloyConfig.get();
   }
 
-  _logMetaWelcomes() {
+  _getMetaWelcomes() {
     let welcomes = this.__meta.info.welcomes;
-    if (!welcomes) return;
+    if (!welcomes) return null;
     if (!Array.isArray(welcomes)) welcomes = [welcomes];
-    if (welcomes.length === 0) return;
+    if (welcomes.length === 0) return null;
+    return welcomes;
+  }
+
+  _logMetaWelcomes() {
+    const welcomes = this._getMetaWelcomes();
+    if (!welcomes) return;
+    console.log(__comment_seperator);
     for (const welcome of welcomes) {
       console.log(welcome);
-      console.log('');
     }
+    console.log(__comment_seperator);
+    console.log('');
+  }
+
+  _logCliDocs() {
+    const welcomes = this._getMetaWelcomes();
+    if (!welcomes) return;
+    const welcome = welcomes[0];
+    if (!welcome || welcome.indexOf('articles/cli-introduce.html') === -1) return;
+    console.log('');
+    console.log(__comment_seperator);
+    console.log(welcome);
+    console.log(__comment_seperator);
   }
 
   _adjustEnv({ env }) {
@@ -173,51 +194,33 @@ class CliCommand extends BaseCommand {
     const self = this;
     return new Promise((resolve, reject) => {
       let executing = false;
-      let counter = 0;
-      let subscribeId = null;
-      const subscribePath = `/a/progress/update/${progressId}`;
       // io
       const io = self._getIOInstance();
-      // queue
-      let queue = [];
-      const queueHandler = eggBornUtils.tools.debounce(() => {
-        for (const queueItem of queue) {
-          checking(queueItem.item);
-        }
-        queue = [];
-      }, __debounceTimeout);
-      // onMessage
-      function onMessage({ message }) {
-        const item = JSON.parse(message.content);
-        if (item) {
-          queuePush(item);
-        }
-      }
+      // io progress
+      //   options
+      const options = {
+        onSubscribed,
+        onProgress,
+      };
+      const ioProgress = SocketIO.progress(io, options);
+      // subscribe
+      ioProgress.subscribe({ progressId });
       // onSubscribed
       async function onSubscribed() {
         try {
           // execute
           if (!executing) {
             executing = true;
-            return await self.__openAuthClient.post({
+            await self.__openAuthClient.post({
               path: '/a/cli/cli/execute',
               body: {
                 progressId,
                 context,
               },
             });
+            return true;
           }
-          // check
-          const item = await self.__openAuthClient.post({
-            path: '/a/progress/progress/check',
-            body: {
-              progressId,
-              counter,
-            },
-          });
-          if (item) {
-            queuePush(item);
-          }
+          return false;
         } catch (err) {
           // force close and destroy
           onDestroy()
@@ -228,12 +231,11 @@ class CliCommand extends BaseCommand {
             .catch(() => {
               reject(err);
             });
+          return true;
         }
       }
-      //
-      function checking(item) {
-        // data
-        const data = item.data ? (typeof item.data === 'string' ? JSON.parse(item.data) : item.data) : {};
+      // onProgress
+      function onProgress({ item, data }) {
         // handle
         if (item.done === 0) {
           setProgresses(data);
@@ -279,24 +281,6 @@ class CliCommand extends BaseCommand {
         }
         console.log(text);
       }
-      function queuePush(item) {
-        counter = item.counter;
-        const queueItem = { item, timestamp: Date.now() };
-        // push
-        const index = queue.findIndex(_queueItem => _queueItem.item.counter > item.counter);
-        if (index === -1) {
-          queue.push(queueItem);
-        } else {
-          queue.splice(index, 0, queueItem);
-        }
-        // check directly
-        while (queue[0] && queue[0].timestamp + 2 * __debounceTimeout < queueItem.timestamp) {
-          const queueItem = queue.shift();
-          checking(queueItem.item);
-        }
-        // queueHandler
-        queueHandler();
-      }
       function adjustText(prefix, text) {
         return String(text)
           .split('\n')
@@ -306,10 +290,7 @@ class CliCommand extends BaseCommand {
       //
       async function onDestroy() {
         // unsubscribe
-        if (subscribeId) {
-          io.unsubscribe(subscribeId);
-          subscribeId = null;
-        }
+        ioProgress.unsubscribe();
         // delete progress
         await self.__openAuthClient.post({
           path: '/a/progress/progress/delete',
@@ -318,13 +299,11 @@ class CliCommand extends BaseCommand {
           },
         });
       }
-      // subscribe
-      subscribeId = io.subscribe(subscribePath, onMessage, onSubscribed);
     });
   }
 
   _getIOInstance() {
-    return IOFn(AdapterFn({ openAuthClient: this.__openAuthClient }));
+    return SocketIO.io(AdapterFn({ openAuthClient: this.__openAuthClient }));
   }
 }
 

@@ -1,6 +1,9 @@
 import validateActionModule from './validateActionModule.js';
 import validateComputedValue from './validateComputedValue.js';
 import validateComputedDisplay from './validateComputedDisplay.js';
+import validateItemTitle from './validateItemTitle.jsx';
+import validateItemConfig from './validateItemConfig.js';
+import validateComponentInstance from './validateComponentInstance.js';
 import renderSearchStates from './render/renderSearchStates.jsx';
 import renderProperties from './render/renderProperties.jsx';
 import renderComponent from './render/renderComponent.jsx';
@@ -14,8 +17,10 @@ import renderColorPicker from './render/renderColorPicker.jsx';
 import renderDatePicker from './render/renderDatePicker.jsx';
 import renderDateRange from './render/renderDateRange.jsx';
 import renderFile from './render/renderFile.jsx';
+import renderImage from './render/renderImage.jsx';
 import renderToggle from './render/renderToggle.jsx';
 import renderSelect from './render/renderSelect.jsx';
+import renderButton from './render/renderButton.jsx';
 import renderLink from './render/renderLink.jsx';
 import renderLanguage from './render/renderLanguage.jsx';
 import renderCategory from './render/renderCategory.jsx';
@@ -28,51 +33,35 @@ import renderDetailsStat from './render/renderDetailsStat.jsx';
 import renderDict from './render/renderDict.jsx';
 import renderAtom from './render/renderAtom.jsx';
 import renderAtomClass from './render/renderAtomClass.jsx';
+import renderAtomClassId from './render/renderAtomClassId.jsx';
+import renderAtomItem from './render/renderAtomItem.jsx';
 import renderDivider from './render/renderDivider.jsx';
 import renderUserLabel from './render/renderUserLabel.jsx';
+import renderUserName from './render/renderUserName.jsx';
 import renderUser from './render/renderUser.jsx';
 import renderRole from './render/renderRole.jsx';
-
-const __renderTypes = [
-  ['group', 'renderGroup'],
-  ['group-empty', 'renderGroupEmpty'],
-  ['group-flatten', 'renderGroupFlatten'],
-  ['panel', 'renderPanel'],
-  ['text', 'renderText'],
-  ['toggle', 'renderToggle'],
-  ['select', 'renderSelect'],
-  ['file', 'renderFile'],
-  ['colorPicker', 'renderColorPicker'],
-  ['datePicker', 'renderDatePicker'],
-  ['dateRange', 'renderDateRange'],
-  ['link', 'renderLink'],
-  ['component', 'renderComponent'],
-  ['component-action', 'renderComponentAction'],
-  ['language', 'renderLanguage'],
-  ['category', 'renderCategory'],
-  ['tags', 'renderTags'],
-  ['resourceType', 'renderResourceType'],
-  ['json', 'renderJson'],
-  ['markdown', 'renderMarkdown'],
-  ['markdown-content', 'renderMarkdownContent'],
-  ['markdown-content-cms', 'renderMarkdownContentCms'],
-  ['details', 'renderDetails'],
-  ['detailsStat', 'renderDetailsStat'],
-  ['dict', 'renderDict'],
-  ['atom', 'renderAtom'],
-  ['atomClass', 'renderAtomClass'],
-  ['divider', 'renderDivider'],
-  ['userLabel', 'renderUserLabel'],
-  ['user', 'renderUser'],
-  ['role', 'renderRole'],
-];
+import renderRoot from './render-utils/renderRoot.jsx';
+import renderItem from './render-utils/renderItem.jsx';
+import renderGroupCommon from './render-utils/renderGroupCommon.jsx';
+import renderUtilsGetContext from './render-utils/getContext.js';
+import renderUtilsGetCascadeScope from './render-utils/getCascadeScope.js';
+import renderUtilsPatchItemClassNameStyle from './render-utils/patchItemClassNameStyle.js';
 
 export default {
   mixins: [
+    renderRoot,
+    renderItem,
+    renderGroupCommon,
+    renderUtilsGetContext,
+    renderUtilsGetCascadeScope,
+    renderUtilsPatchItemClassNameStyle,
     renderSearchStates,
     validateActionModule,
     validateComputedValue,
     validateComputedDisplay,
+    validateItemTitle,
+    validateItemConfig,
+    validateComponentInstance,
     renderProperties,
     renderComponent,
     renderComponentAction,
@@ -85,8 +74,10 @@ export default {
     renderDatePicker,
     renderDateRange,
     renderFile,
+    renderImage,
     renderToggle,
     renderSelect,
+    renderButton,
     renderLink,
     renderLanguage,
     renderCategory,
@@ -99,8 +90,11 @@ export default {
     renderDict,
     renderAtom,
     renderAtomClass,
+    renderAtomClassId,
+    renderAtomItem,
     renderDivider,
     renderUserLabel,
+    renderUserName,
     renderUser,
     renderRole,
   ],
@@ -162,10 +156,16 @@ export default {
         immediate: ebComputed.immediate,
       });
     },
-    getValue(parcel, key) {
+    getDataKey(parcel, key) {
+      const property = parcel.properties[key];
+      if (!property) return key; // maybe already is dataKey
+      return property.ebDataKey || key;
+    },
+    getValue(parcel, key, dataKey) {
       if (!parcel.data) return undefined;
       const property = parcel.properties[key];
-      const _value = parcel.data[key];
+      dataKey = dataKey || key;
+      const _value = parcel.data[dataKey];
       if (!property) {
         return _value;
       }
@@ -191,21 +191,21 @@ export default {
       // typed value
       const _value = this._convertValueType(property, value);
 
-      const _valueOld = parcel.data[key];
+      const dataKey = this.getDataKey(parcel, key);
+      const _valueOld = parcel.data[dataKey];
 
-      this.$set(parcel.data, key, _value); // always set as maybe Object
+      this.$set(parcel.data, dataKey, _value); // always set as maybe Object
 
       // dataSrc
       //   always set value for !property
       if (!property || property.type) {
         // change src
-        this.$set(parcel.dataSrc, key, _value);
+        this.$set(parcel.dataSrc, dataKey, _value);
         // #2025
         // emit changed
         if (property && !property.ebReadOnly && !this._checkIfEqual(_valueOld, _value)) {
           this.$emit('change', _value);
-          this.validate.$emit('validateItem:change', key, _value);
-          this.validate.$emit('validateItemChange', key, _value);
+          this.validate._emitValidateItemChange(key, _value);
         }
       }
     },
@@ -269,46 +269,22 @@ export default {
       if (dataPath[0] !== '/') return this.validate.dataPathRoot + dataPath;
       return dataPath;
     },
-    getTitle(context, notHint) {
-      const { property } = context;
-      // not use 'key' as default title
-      let title = property.ebTitle || '';
-      if (title) {
-        title = this.$text(title);
+    getAtomId(context, checkHost = true) {
+      const { parcel, property } = context;
+      // atomId: maybe from host
+      let atomId;
+      if (checkHost) {
+        atomId = this.validate.host && this.validate.host.atomId;
       }
-      // ignore panel/group/toggle
-      const ebType = property.ebType;
-      if (ebType === 'panel' || ebType === 'group' || ebType === 'group-flatten' || ebType === 'toggle') return title;
-      // only edit
-      if (this.validate.readOnly || property.ebReadOnly) return title;
-      // hint
-      if (!notHint) {
-        // config
-        let hint = this.validate.host && this.validate.host.hint;
-        if (!hint && hint !== false) {
-          hint = this.$config.validate.hint;
-        }
-        if (hint === false) {
-          return title;
-        }
-        const hintOptional = hint.optional;
-        const hintMust = hint.must;
-        // check optional
-        if (hintOptional && !property.notEmpty) {
-          return `${title}${this.$text(hintOptional)}`;
-        }
-        // check must
-        if (hintMust && property.notEmpty) {
-          return `${title}${this.$text(hintMust)}`;
-        }
+      if (!atomId) {
+        atomId = property.ebParams && property.ebParams.atomId;
       }
-      // default
-      return title;
-    },
-    getPlaceholder(context) {
-      const { property } = context;
-      if (this.validate.readOnly || property.ebReadOnly) return undefined;
-      return property.ebDescription ? this.$text(property.ebDescription) : this.getTitle(context, true);
+      if (typeof atomId === 'string') {
+        atomId = parcel.data[atomId] || 0;
+      } else {
+        atomId = atomId || 0;
+      }
+      return atomId;
     },
     onSubmit(event) {
       this.validate.onSubmit(event);
@@ -320,112 +296,6 @@ export default {
       const metaValidateProperty = this.$meta.util.getProperty(this.validate, `meta.properties.${dataPath}`);
       if (!metaValidateProperty && !meta) return property;
       return this.$meta.util.extend({}, property, metaValidateProperty, meta);
-    },
-    getContext({ parcel, key, property, meta, index, groupCount }) {
-      // dataPath
-      const dataPath = parcel.pathParent + key;
-      // property
-      property = this._combinePropertyMeta({ property, meta, dataPath });
-      // patch getValue/setValue
-      const patchGetValue = this.$meta.util.getProperty(property, 'ebPatch.getValue');
-      const patchSetValue = this.$meta.util.getProperty(property, 'ebPatch.setValue');
-      const patchGetValueGlobal = this.$meta.util.getProperty(this.validate, 'meta.ebPatch.getValue');
-      const patchSetValueGlobal = this.$meta.util.getProperty(this.validate, 'meta.ebPatch.setValue');
-      // context
-      const context = {
-        validate: this.validate,
-        validateItem: this,
-        parcel,
-        key,
-        property,
-        dataPath,
-        meta,
-        index,
-        groupCount,
-        getTitle: notHint => {
-          return this.getTitle(context, notHint);
-        },
-        getValue: name => {
-          const propertyName = name || key;
-          let value = this.getValue(parcel, propertyName);
-          if (patchGetValue && (!name || name === key)) {
-            // only patch this
-            value = patchGetValue(value);
-          }
-          if (patchGetValueGlobal) {
-            value = patchGetValueGlobal(value, propertyName);
-          }
-          return value;
-        },
-        setValue: (value, name) => {
-          const propertyName = name || key;
-          if (patchSetValueGlobal) {
-            value = patchSetValueGlobal(value, propertyName);
-          }
-          if (patchSetValue && (!name || name === key)) {
-            // only patch this
-            value = patchSetValue(value);
-          }
-          this.setValue(parcel, propertyName, value);
-        },
-      };
-      return context;
-    },
-    renderRoot() {
-      if (!this.validate.ready) return <div></div>;
-      // context
-      const context = {
-        parcel: this.getParcel(),
-      };
-      // renderProperties
-      const children = this.renderProperties(context);
-      const props = {
-        form: true,
-        noHairlinesMd: true,
-        inlineLabels: !this.$config.form.floatingLabel,
-      };
-      return (
-        <eb-list staticClass="eb-list-row" {...{ props }} onSubmit={this.onSubmit}>
-          {children}
-        </eb-list>
-      );
-    },
-    renderItem() {
-      if (!this.validate.ready) return <div></div>;
-      // context
-      const parcel = this.getParcel();
-      const key = this.dataKey;
-      const context = this.getContext({
-        parcel,
-        key,
-        property: this.property || parcel.properties[key],
-        meta: this.meta,
-      });
-      // renderItem
-      return this._renderItem(context);
-    },
-    _renderItem(context) {
-      const { parcel, key, property } = context;
-      // ebType
-      const ebType = property.ebType;
-      // ignore if not specified
-      if (!ebType) return null;
-      // ebDisplay
-      if (!this._handleComputedDisplay(parcel, key, property)) {
-        // check group flatten
-        if (property.ebType === 'group-flatten') {
-          this._skipFlattenItems(context);
-        }
-        // null
-        return null;
-      }
-      // render
-      const renderType = __renderTypes.find(item => item[0].toUpperCase() === ebType.toUpperCase());
-      if (!renderType) {
-        // not support
-        return <div>{`not support: ${ebType}`}</div>;
-      }
-      return this[renderType[1]](context);
     },
     _handleComputedDisplay(parcel, key, property) {
       // check if specify ebDisplay

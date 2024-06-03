@@ -1,22 +1,22 @@
 <template>
-  <eb-page :page-content="false" tabs with-subnavbar>
+  <eb-page :page-content="false" tabs>
     <eb-navbar :title="pageTitle" eb-back-link="Back">
       <f7-subnavbar>
         <f7-toolbar top tabbar>
           <eb-link
             :tab-link="`#${tabId.drafts}`"
             :tabLinkActive="tabName === 'drafts'"
-            :text="$text('Drafts')"
+            :text="$text('DraftsDraftingMineTab')"
             badge-color="orange"
             :badge="stats.drafts"
-            :stats_params="{ module: 'a-base', name: 'drafts' }"
+            :stats_params="{ module: 'a-base', name: 'draftsDrafting' }"
             @stats_change="onStatsChange($event, 'drafts')"
           ></eb-link>
           <eb-link
             :tab-link="`#${tabId.draftsFlowing}`"
             :tabLinkActive="tabName === 'draftsFlowing'"
             :text="$text('DraftsFlowingMineTab')"
-            badge-color="gray"
+            badge-color="orange"
             :badge="stats.draftsFlowing"
             :stats_params="{ module: 'a-base', name: 'draftsFlowing' }"
             @stats_change="onStatsChange($event, 'draftsFlowing')"
@@ -31,7 +31,7 @@
         data-ref="drafts"
         @tab:show="tabName = 'drafts'"
       >
-        <atomTab ref="drafts" slot="list" :container="getContainer('drafts')"></atomTab>
+        <AtomList ref="drafts" slot="list" :container="getContainer('drafts')"></AtomList>
       </eb-tab-page-content>
       <eb-tab-page-content
         :id="tabId.draftsFlowing"
@@ -39,17 +39,17 @@
         data-ref="draftsFlowing"
         @tab:show="tabName = 'draftsFlowing'"
       >
-        <atomTab ref="draftsFlowing" slot="list" :container="getContainer('draftsFlowing')"></atomTab>
+        <AtomList ref="draftsFlowing" slot="list" :container="getContainer('draftsFlowing')"></AtomList>
       </eb-tab-page-content>
     </f7-tabs>
   </eb-page>
 </template>
 <script>
 import Vue from 'vue';
-import atomTab from '../../components/tab/atomTab.jsx';
+import AtomList from '../../components/atom/atomList.jsx';
 export default {
   components: {
-    atomTab,
+    AtomList,
   },
   data() {
     const query = this.$f7route.query;
@@ -80,10 +80,12 @@ export default {
   methods: {
     getContainer(mode) {
       const options = { stage: 'draft', mine: 1 };
+      const params = {};
       if (mode === 'drafts') {
         options.where = {
           atomFlowId: 0,
         };
+        params.actionOnClick = 'write';
       } else {
         options.where = {
           atomFlowId: { op: '>', val: 0 },
@@ -91,7 +93,9 @@ export default {
       }
       return {
         options,
+        params,
         layout: this.layout,
+        autoInit: false,
       };
     },
     onStatsChange(event, mode) {

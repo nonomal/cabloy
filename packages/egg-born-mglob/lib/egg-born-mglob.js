@@ -2,8 +2,11 @@ const path = require('path');
 const fse = require('fs-extra');
 const semver = require('semver');
 const chalk = require('chalk');
+const boxen = require('boxen');
 const eggBornUtils = require('egg-born-utils');
 const mparse = require('egg-born-mparse').default;
+
+const boxenOptions = { padding: 1, margin: 1, align: 'center', borderColor: 'yellow', borderStyle: 'round' };
 
 module.exports = {
   glob: eggBornMglob,
@@ -23,6 +26,7 @@ const __pathSuites = [
 const __pathsModules = [
   {
     prefix: 'src/module/',
+    vendor: false,
     public: false,
     fronts: [{ js: 'front/src/main.js' }, { js: 'dist/front.js' }],
     backends: [
@@ -32,6 +36,7 @@ const __pathsModules = [
   },
   {
     prefix: 'src/module-system/',
+    vendor: false,
     public: false,
     fronts: [{ js: 'front/src/main.js' }, { js: 'dist/front.js' }],
     backends: [
@@ -41,6 +46,7 @@ const __pathsModules = [
   },
   {
     prefix: 'src/suite/*/modules/',
+    vendor: false,
     public: false,
     fronts: [{ js: 'front/src/main.js' }, { js: 'dist/front.js' }],
     backends: [
@@ -50,6 +56,7 @@ const __pathsModules = [
   },
   {
     prefix: 'src/module-vendor/',
+    vendor: true,
     public: false,
     fronts: [{ js: 'dist/front.js' }, { js: 'front/src/main.js' }],
     backends: [
@@ -59,6 +66,7 @@ const __pathsModules = [
   },
   {
     prefix: 'src/suite-vendor/*/modules/',
+    vendor: true,
     public: false,
     fronts: [{ js: 'dist/front.js' }, { js: 'front/src/main.js' }],
     backends: [
@@ -68,7 +76,9 @@ const __pathsModules = [
   },
   {
     prefix: 'node_modules/egg-born-module-',
+    vendor: true,
     public: true,
+    node_modules: true,
     fronts: [{ js: 'dist/front.js' }, { js: 'front/src/main.js' }],
     backends: [
       { js: 'dist/backend.js', static: 'dist/staticBackend' },
@@ -77,9 +87,12 @@ const __pathsModules = [
   },
 ];
 
-function eggBornMglob(projectPath, disabledModules, disabledSuites, log) {
+// type: front/backend/all
+function eggBornMglob(options) {
+  const { projectPath, disabledModules, disabledSuites, log, type } = options;
   // context
   const context = {
+    options,
     suites: {},
     modules: {},
     modulesArray: [],
@@ -99,7 +112,7 @@ function eggBornMglob(projectPath, disabledModules, disabledSuites, log) {
   // parse suites
   const suites = __parseSuites(projectPath);
   // parse modules
-  const modules = __parseModules(projectPath);
+  const modules = __parseModules(projectPath, type);
   // bind suites modules
   __bindSuitesModules(suites, modules);
 
@@ -121,6 +134,9 @@ function eggBornMglob(projectPath, disabledModules, disabledSuites, log) {
     modulesLocal: context.modulesLocal,
     modulesGlobal: context.modulesGlobal,
     modulesMonkey: context.modulesMonkey,
+    //
+    suitesLocal: context.suitesLocal,
+    suitesVendor: context.suitesVendor,
   };
 }
 
@@ -166,6 +182,7 @@ function __pushModule(context, modules, moduleRelativeName) {
 }
 
 function __orderDependencies(context, modules, module, moduleRelativeName) {
+  if (context.options.disableCheckDependencies) return true;
   if (!module.package.eggBornModule || !module.package.eggBornModule.dependencies) return true;
 
   let enabled = true;
@@ -174,11 +191,11 @@ function __orderDependencies(context, modules, module, moduleRelativeName) {
   for (const key in dependencies) {
     const subModule = modules[key];
     if (!subModule) {
-      console.warn(
+      const message =
         chalk.keyword('orange')(`module ${moduleRelativeName} disabled`) +
-          ', because ' +
-          chalk.keyword('cyan')(`module ${key} not exists`)
-      );
+        ', because ' +
+        chalk.keyword('cyan')(`module ${key} not exists`);
+      console.log('\n' + boxen(message, boxenOptions) + '\n');
       enabled = false; // process.exit(0);
       continue;
     }
@@ -197,23 +214,36 @@ function __orderDependencies(context, modules, module, moduleRelativeName) {
   return enabled;
 }
 
-function __parseModules(projectPath) {
+function __parseModules(projectPath, type) {
   const modules = {};
   for (const __path of __pathsModules) {
     const prefix = `${projectPath}/${__path.prefix}`;
     const filePkgs = eggBornUtils.tools.globbySync(`${prefix}*/package.json`);
-    for (const filePkg of filePkgs) {
+    for (let filePkg of filePkgs) {
       // name
-      const name = filePkg.split('/').slice(-2)[0];
+      let name = filePkg.split('/').slice(-2)[0];
+      // check if '-' prefix exists
+      if (name.substring(0, 1) === '-') {
+        // skip
+        continue;
+      }
+      // check if full name
       if (!__path.public && name.indexOf('egg-born-module-') > -1) {
-        throw new Error(`Should use relative name for local module: ${name}`);
+        const pathSrc = path.join(prefix, name);
+        name = name.substring('egg-born-module-'.length);
+        filePkg = path.join(prefix, name, 'package.json');
+        const pathDest = path.join(prefix, name);
+        fse.moveSync(pathSrc, pathDest);
+        // throw new Error(`Should use relative name for local module: ${name}`);
       }
       // info
       const info = mparse.parseInfo(name, 'module');
       if (!info) {
         throw new Error(`module name is not valid: ${name}`);
       }
+      info.vendor = __path.vendor;
       info.public = __path.public;
+      info.node_modules = __path.node_modules;
       // check if exists
       if (!modules[info.relativeName]) {
         // meta
@@ -228,7 +258,7 @@ function __parseModules(projectPath) {
           js: {},
           static: {},
         };
-        const _moduleMeta = __parseModule(__path, moduleMeta);
+        const _moduleMeta = __parseModule(__path, moduleMeta, type);
         if (_moduleMeta) {
           // enhance check public
           // if (_moduleMeta.info.public) {
@@ -244,28 +274,36 @@ function __parseModules(projectPath) {
   return modules;
 }
 
-function __parseModule(__path, moduleMeta) {
+function __parseModule(__path, moduleMeta, type) {
   const root = moduleMeta.root;
   // front
-  for (const item of __path.fronts) {
-    const file = path.join(root, item.js);
-    if (fse.existsSync(file)) {
-      moduleMeta.js.front = file;
-      break;
+  if (type !== 'backend') {
+    for (const item of __path.fronts) {
+      const file = path.join(root, item.js);
+      if (fse.existsSync(file)) {
+        moduleMeta.js.front = file;
+        break;
+      }
+    }
+    if (!moduleMeta.js.front) {
+      return null;
     }
   }
   // backend
-  for (const item of __path.backends) {
-    const file = path.join(root, item.js);
-    if (fse.existsSync(file)) {
-      moduleMeta.js.backend = file;
-      const staticBackendPath = path.normalize(path.join(root, item.static));
-      moduleMeta.static.backend = staticBackendPath;
-      break;
+  if (type !== 'front') {
+    for (const item of __path.backends) {
+      const file = path.join(root, item.js);
+      if (fse.existsSync(file)) {
+        moduleMeta.js.backend = file;
+        const staticBackendPath = path.normalize(path.join(root, item.static));
+        moduleMeta.static.backend = staticBackendPath;
+        break;
+      }
+    }
+    if (!moduleMeta.js.backend) {
+      return null;
     }
   }
-  // check if empty
-  if (!moduleMeta.js.front || !moduleMeta.js.backend) return null;
   // ok
   return moduleMeta;
 }
@@ -296,6 +334,7 @@ function __logModules(context, log) {
   for (const key in context.modulesMonkey) {
     console.log(chalk.cyan('> ' + key));
   }
+  console.log(chalk.keyword('orange')(`\n=== Total Modules: ${context.modulesArray.length} ===`));
   // console.log('\n');
 }
 
@@ -318,6 +357,7 @@ function __logSuites(context, log) {
   for (const key in context.suitesVendor) {
     console.log(chalk.cyan('> ' + key));
   }
+  console.log(chalk.keyword('orange')(`\n=== Total Suites: ${Object.keys(context.suites).length} ===`));
   console.log('\n');
 }
 
@@ -346,9 +386,23 @@ function __parseSuites(projectPath) {
   for (const __path of __pathSuites) {
     const prefix = `${projectPath}/${__path.prefix}`;
     const filePkgs = eggBornUtils.tools.globbySync(`${prefix}*/package.json`);
-    for (const filePkg of filePkgs) {
+    for (let filePkg of filePkgs) {
       // name
-      const name = filePkg.split('/').slice(-2)[0];
+      let name = filePkg.split('/').slice(-2)[0];
+      // check if '-' prefix exists
+      if (name.substring(0, 1) === '-') {
+        // skip
+        continue;
+      }
+      // check if full name
+      if (name.indexOf('egg-born-suite-') > -1) {
+        const pathSrc = path.join(prefix, name);
+        name = name.substring('egg-born-suite-'.length);
+        filePkg = path.join(prefix, name, 'package.json');
+        const pathDest = path.join(prefix, name);
+        fse.moveSync(pathSrc, pathDest);
+        // throw new Error(`Should use relative name for local suite: ${name}`);
+      }
       // info
       const info = mparse.parseInfo(name, 'suite');
       if (!info) {
@@ -388,9 +442,15 @@ function __bindSuitesModules(suites, modules) {
     if (!res) continue;
     // suiteName
     const suiteName = res[1];
-    // bind
-    module.suite = suiteName;
-    suites[suiteName].modules.push(moduleName);
+    const suite = suites[suiteName];
+    if (!suite) {
+      // means disabled
+      delete modules[moduleName];
+    } else {
+      // bind
+      module.suite = suiteName;
+      suite.modules.push(moduleName);
+    }
   }
 }
 

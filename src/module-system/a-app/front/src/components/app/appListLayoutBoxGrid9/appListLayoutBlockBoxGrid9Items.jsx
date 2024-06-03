@@ -21,19 +21,37 @@ function installFactory(_Vue) {
           atomClass: this.layoutManager.base_atomClassApp,
         });
       },
-      onItemClick(event, item) {
+      async onItemClick(event, item) {
         const appKey = item.atomStaticKey;
-        this.layoutManager.$meta.vueLayout.app_openHome({
-          view: this.layoutManager.$view,
+        const appIsolate = item.appIsolate;
+        // appIsolate
+        const action = {
+          actionModule: 'a-app',
+          actionComponent: 'actionTools',
+          name: 'openApp',
           appKey,
+          appIsolate,
+          external: !!appIsolate,
           force: false,
+          target: '_self',
+        };
+        return await this.layoutManager.$meta.util.performAction({
+          ctx: this.layoutManager,
+          action,
+          item: null,
         });
       },
       _renderGroup(group) {
         const children = [];
         for (const item of group.items) {
+          const devAppKey = this.$meta.config.env === 'development' ? item.atomStaticKey : null;
           const domItem = (
-            <eb-link key={item.atomId} class="box-grid-cell" propsOnPerform={event => this.onItemClick(event, item)}>
+            <eb-link
+              key={item.atomId}
+              data-dev-app-key={devAppKey}
+              class="box-grid-cell"
+              propsOnPerform={event => this.onItemClick(event, item)}
+            >
               <div class="box-grid-cell-icon">
                 <f7-icon f7={item.appIcon} size="24"></f7-icon>
               </div>

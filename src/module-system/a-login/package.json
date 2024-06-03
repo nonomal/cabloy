@@ -1,6 +1,6 @@
 {
   "name": "egg-born-module-a-login",
-  "version": "4.1.13",
+  "version": "5.0.0",
   "eggBornModule": {
     "dependencies": {}
   },
@@ -11,5 +11,6 @@
     "build:all": "npm run build:front && npm run build:backend",
     "preversion": "npm run build:all && git add ."
   },
-  "author": "zhennann"
+  "author": "zhennann",
+  "dependencies": {}
 }

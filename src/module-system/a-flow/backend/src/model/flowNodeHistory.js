@@ -1,8 +1,12 @@
-module.exports = app => {
-  class FlowNodeHistory extends app.meta.Model {
-    constructor(ctx) {
-      super(ctx, { table: 'aFlowNodeHistory', options: { disableDeleted: false } });
-    }
+const moduleInfo = module.info;
+module.exports = class FlowNodeHistory extends module.meta.class.ModelCache {
+  constructor() {
+    super({
+      table: 'aFlowNodeHistory',
+      options: {
+        disableDeleted: false,
+        cacheName: { module: moduleInfo.relativeName, name: 'modelFlowNodeHistory' },
+      },
+    });
   }
-  return FlowNodeHistory;
 };

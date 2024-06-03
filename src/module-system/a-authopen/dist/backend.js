@@ -84,7 +84,10 @@ module.exports = app => {
 
     async create({ atomClass, item, options, user }) {
       // check demo
-      this.ctx.bean.util.checkDemo();
+      const ctxCaller = this.ctx.ctxCaller;
+      if (ctxCaller && ctxCaller.path === '/api/a/base/atom/create') {
+        this.ctx.bean.util.checkDemo();
+      }
       // user
       const userId = user.id;
       // super
@@ -142,7 +145,6 @@ module.exports = app => {
       await super.write({ atomClass, target, key, item, options, user });
       // update authOpen
       const data = await this.ctx.model.authOpen.prepareData(item);
-      data.id = key.itemId;
       await this.ctx.model.authOpen.update(data);
     }
 
@@ -719,7 +721,7 @@ module.exports = function (ctx) {
       const name = `clidev@${ctx.app.name}`;
       // host
       const buildConfig = require3(path.join(process.cwd(), 'build/config.js'));
-      const host = `http://localhost:${buildConfig.backend.port}`;
+      const host = `http://127.0.0.1:${buildConfig.backend.port}`;
       // add
       await this.localToken.add({
         name,
@@ -1428,9 +1430,8 @@ module.exports = app => {
             simple: true,
             history: false,
             inner: true,
-            fields: {
-              custom: ['clientID,clientSecret,clientSecretHidden'],
-            },
+            comment: false,
+            attachment: false,
             layout: {
               config: {
                 atomList: 'layoutAtomListAuthOpen',

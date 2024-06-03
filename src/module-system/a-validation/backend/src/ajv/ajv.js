@@ -1,56 +1,54 @@
-const require3 = require('require3');
-const Ajv = require3('ajv');
-const AjvLocalize = require3('ajv-i18n');
-const AjvKeywords = require3('ajv-keywords');
-const jsBeautify = require3('js-beautify');
+const Ajv = require('ajv');
+const AjvLocalize = require('ajv-i18n');
+const AjvKeywords = require('ajv-keywords');
+const jsBeautify = require('js-beautify');
 const systemKeywords = require('./keywords.js');
 
-module.exports = app => {
-  Ajv.create = function ({ options, keywords, schemas, schemaRoot }) {
-    // default
-    const _options = {
-      $data: true,
-      allErrors: true,
-      verbose: false,
-      jsonPointers: true,
-      format: 'full',
-      unknownFormats: true,
-      useDefaults: true,
-      coerceTypes: true,
-      transpile: false,
-      passContext: true,
-      removeAdditional: 'all',
-    };
-    // processCode
-    if (app.meta.isTest || app.meta.isLocal) {
-      _options.processCode = jsBeautify.js_beautify;
-    }
-    // override
-    Object.assign(_options, options);
-    // ajv
-    const ajv = new Ajv(_options);
-    AjvKeywords(ajv);
-    ajv.v = createValidate(schemaRoot);
-    // systemKeywords
-    for (const _keyword in systemKeywords) {
-      ajv.addKeyword(_keyword, systemKeywords[_keyword]);
-    }
-    // keywords
-    if (keywords) {
-      for (const _keyword in keywords) {
-        ajv.addKeyword(_keyword, keywords[_keyword]);
-      }
-    }
-    // schemas
-    if (schemas) {
-      for (const key in schemas) {
-        ajv.addSchema(schemas[key], key);
-      }
-    }
-    return ajv;
+Ajv.create = function ({ options, keywords, schemas, schemaRoot }) {
+  // default
+  const _options = {
+    $data: true,
+    allErrors: true,
+    verbose: false,
+    jsonPointers: true,
+    format: 'full',
+    unknownFormats: true,
+    useDefaults: true,
+    coerceTypes: true,
+    transpile: false,
+    passContext: true,
+    removeAdditional: 'all',
   };
-  return Ajv;
+  // processCode
+  if (module.meta.isTest || module.meta.isLocal) {
+    _options.processCode = jsBeautify.js_beautify;
+  }
+  // override
+  Object.assign(_options, options);
+  // ajv
+  const ajv = new Ajv(_options);
+  AjvKeywords(ajv);
+  ajv.v = createValidate(schemaRoot);
+  // systemKeywords
+  for (const _keyword in systemKeywords) {
+    ajv.addKeyword(_keyword, systemKeywords[_keyword]);
+  }
+  // keywords
+  if (keywords) {
+    for (const key in keywords) {
+      const _key = key.indexOf('x-') === 0 ? key : `x-${key}`;
+      ajv.addKeyword(_key, keywords[key]);
+    }
+  }
+  // schemas
+  if (schemas) {
+    for (const key in schemas) {
+      ajv.addSchema(schemas[key], key);
+    }
+  }
+  return ajv;
 };
+module.exports = Ajv;
 
 function createValidate(schemaRoot) {
   return async function ({ ctx, schema, data, filterOptions }) {
@@ -79,7 +77,7 @@ function createValidate(schemaRoot) {
 
 function _filterResult({ ajv, validate, data, filterOptions }) {
   if (filterOptions === true) {
-    filterOptions = { type: true, ebReadOnly: true };
+    filterOptions = { type: true, ebCopy: true, ebReadOnly: true };
   }
   _filterSchema({ ajv, schema: validate.schema, data, filterOptions });
 }
@@ -98,6 +96,8 @@ function _filterProperties({ ajv, properties, data, filterOptions }) {
       data[key] = null;
     }
     if (filterOptions.type && !property.type) {
+      delete data[key];
+    } else if (filterOptions.ebCopy && property.ebCopy === false) {
       delete data[key];
     } else if (filterOptions.ebReadOnly && property.ebReadOnly === true) {
       delete data[key];

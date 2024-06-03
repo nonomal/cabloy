@@ -410,10 +410,7 @@
 
 <body>
   <script>
-  if (window.navigator.userAgent.indexOf('MSIE ') >= 0 || window.navigator.userAgent.indexOf('Trident/') >= 0) {
-    window.document.body.innerHTML = '<h1 style="text-align:center;">Supports All Modern Browsers Except IE</h1>';
-  }
-
+    window.__webpack_public_path__ = '<%= htmlWebpackPluginPublicPath %>'; 
   </script>
   <div id="app-loading">
     <div>

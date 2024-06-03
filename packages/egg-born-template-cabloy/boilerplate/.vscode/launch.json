@@ -6,15 +6,31 @@
   "configurations": [
     {
       "name": "dev:backend",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:backend"]
+      "runtimeArgs": ["run", "dev:backend"],
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "dev:backend(attach)",
+      "type": "node",
+      "request": "attach",
+      "processId": "${command:PickProcess}",
+      "cwd": "${workspaceRoot}",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "debug:chrome",
+      "type": "chrome",
+      "request": "launch",
+      "webRoot": "${workspaceRoot}",
+      "url": "http://localhost:9092"
     },
     {
       "name": "test:backend",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "runtimeExecutable": "npm",
@@ -22,11 +38,19 @@
     },
     {
       "name": "cov:backend",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "cov:backend"]
+    },
+    {
+      "name": "dev:front",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:front"]
     }
   ]
 }

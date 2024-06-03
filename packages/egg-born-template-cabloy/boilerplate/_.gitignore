@@ -1,6 +1,7 @@
 node_modules
 /coverage
 /dist
+/dist-release
 
 .vscode
 .idea
@@ -21,11 +22,14 @@ node_modules
 !/docker-compose/output/app/cabloy/.gitkeep
 !/docker-compose/output/app/dist/.gitkeep
 
+/src/backend/demo
 /src/backend/app
 /src/backend/config
 /src/backend/logs
 /src/backend/run
 /src/front/config
+/src/front/__dist
+/src/front/__runtime
 
 /src/suite-vendor/*
 !/src/suite-vendor/.gitkeep

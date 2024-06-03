@@ -3,12 +3,19 @@ export default function () {
   const beforeCreate = function (ctx) {
     Object.defineProperty(ctx, '$view', {
       get() {
-        return ctx.$f7router && ctx.$f7router.view.$el[0].__vue__;
+        const view = ctx.$f7router?.view;
+        if (!view) return null;
+        return view.$el[0].__vue__;
       },
     });
-    Object.defineProperty(ctx, '$page', {
+    Object.defineProperty(ctx, '$viewAppMethods', {
       get() {
-        let page = ctx.$pageContainer;
+        return ctx.$view || ctx.$meta.vueLayout.appMethods;
+      },
+    });
+    Object.defineProperty(ctx, '$pageContainer', {
+      get() {
+        let page = ctx.$page;
         if (!page) return null;
         while (page.$parent.$options._componentTag !== 'eb-view') {
           page = page.$parent;
@@ -16,17 +23,17 @@ export default function () {
         return page;
       },
     });
-    Object.defineProperty(ctx, '$pageContainer', {
+    Object.defineProperty(ctx, '$page', {
       get() {
         const pageEl = ctx.$$(ctx.$el).closest('.page');
         const page = pageEl.length > 0 && pageEl[0].__vue__;
         if (!page) return null;
-        return page;
+        return page.waitForPageAfterIn ? page : page.$children[0];
       },
     });
     Object.defineProperty(ctx, '$pageRoute', {
       get() {
-        const page = ctx.$page;
+        const page = ctx.$pageContainer;
         if (!page) {
           return ctx.$f7router.currentRoute;
         }

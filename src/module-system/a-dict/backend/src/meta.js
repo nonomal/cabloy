@@ -1,64 +1,24 @@
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  // static
-  const staticLayouts = require('./config/static/layouts.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  // meta
-  const meta = {
-    base: {
-      atoms: {
-        dict: {
-          info: {
-            bean: 'dict',
-            title: 'Dict',
-            tableName: 'aDict',
-            tableNameModes: {
-              full: 'aDictViewFull',
-            },
-            inner: true,
-            resource: true,
-            language: false,
-            category: false,
-            tag: false,
-            layout: {
-              config: {
-                atomList: 'layoutAtomListDict',
-              },
-            },
-          },
-          actions: {
-            write: {
-              enableOnStatic: true,
-            },
-          },
-          validator: 'dict',
-          search: {
-            validator: 'dictSearch',
-          },
-        },
+const atomClasses = require('./meta/atomClass/atomClasses.js');
+const schemas = require('./meta/validation/schemas.js');
+const staticLayouts = require('./meta/static/layouts.js');
+const staticResources = require('./meta/static/resources.js');
+// meta
+const meta = {
+  base: {
+    atoms: atomClasses,
+    statics: {
+      'a-baselayout.layout': {
+        items: staticLayouts,
       },
-      statics: {
-        'a-baselayout.layout': {
-          items: staticLayouts,
-        },
-        'a-base.resource': {
-          items: staticResources,
-        },
+      'a-base.resource': {
+        items: staticResources,
       },
     },
-    validation: {
-      validators: {
-        dict: {
-          schemas: 'dict',
-        },
-        dictSearch: {
-          schemas: 'dictSearch',
-        },
-      },
-      keywords: {},
-      schemas,
-    },
-  };
-  return meta;
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
 };
+module.exports = meta;

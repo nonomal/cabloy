@@ -1,6 +1,6 @@
-module.exports = app => {
-  // const moduleInfo = app.meta.mockUtil.parseInfoFromPackage(__dirname);
-  class File extends app.Service {
+module.exports =
+  // const moduleInfo = module.info;
+  class File {
     async all({ atomClass, options, user }) {
       return await this.ctx.bean.file.all({ atomClass, options, user });
     }
@@ -42,7 +42,4 @@ module.exports = app => {
     async fileDownloadCheck({ file, user }) {
       return await this.ctx.bean.file.fileDownloadCheck({ file, user });
     }
-  }
-
-  return File;
-};
+  };

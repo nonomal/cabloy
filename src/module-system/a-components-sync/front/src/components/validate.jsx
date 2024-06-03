@@ -60,6 +60,12 @@ export default {
     meta: {
       type: Object,
     },
+    onFlush: {
+      type: Function,
+    },
+    onReset: {
+      type: Function,
+    },
     onPerform: {
       type: Function,
     },
@@ -89,8 +95,10 @@ export default {
       schemaModuleName: null,
       renderModuleName: null,
       dataCopy: null,
+      dataInit: null,
       callbacksPerformBefore: [],
       callbacksPerformAfter: [],
+      isDirty: false,
     };
   },
   computed: {
@@ -109,14 +117,15 @@ export default {
     },
   },
   watch: {
-    params() {
+    params(valueNew, valueOld) {
+      if (JSON.stringify(valueNew) === JSON.stringify(valueOld)) return;
       this.schemaMaybeChanged();
     },
     'meta.schema': function () {
       this.schemaMaybeChanged();
     },
     data() {
-      this.initData();
+      this._initData();
     },
     parcel(newValue) {
       this.$emit('parcelChanged', newValue);
@@ -129,7 +138,7 @@ export default {
     },
   },
   created() {
-    this.initData();
+    this._initData();
     this.vSearchStates = this.searchStates;
   },
   mounted() {
@@ -146,24 +155,68 @@ export default {
         this.fetchSchema();
       });
     },
-    initData() {
-      this.dataCopy = this.$meta.util.extend({}, this.data);
-    },
-    reset() {
+    _resetErrors() {
       this.verrors = null;
       this.$emit('errorsReset');
     },
-    async perform(event, context) {
+    _emitValidateItemChange(key, value) {
+      this.$emit('validateItem:change', key, value);
+      this.$emit('validateItemChange', key, value);
+      this._emitDataChange();
+      this._emitDataDirtyChange(true);
+    },
+    _emitDataChange() {
+      this.$emit('change', this.data);
+    },
+    _emitDataDirtyChange(isDirty) {
+      if (this.isDirty !== isDirty) {
+        this.isDirty = isDirty;
+        this.$emit('dirtyChange', isDirty);
+        this.$emit('dirty:change', isDirty);
+      }
+    },
+    _initData() {
+      this.dataCopy = this.$meta.util.extend({}, this.data);
+      this.dataInit = this.$meta.util.extend({}, this.data);
+      this._emitDataDirtyChange(false);
+    },
+    getDirty() {
+      return this.isDirty;
+    },
+    async reset(event, context) {
+      if (!this.ready) return;
+      this._resetErrors();
+      this.$meta.util.replaceItem(this.data, this.dataInit);
+      this.dataCopy = this.$meta.util.extend({}, this.data);
+      this._emitDataChange();
+      this._emitDataDirtyChange(false);
+      if (this.onReset) {
+        await this.onReset(event, context, this.data);
+      }
+    },
+    async flush(event, context) {
+      if (!this.ready) return;
+      this._resetErrors();
+      this.dataInit = this.$meta.util.extend({}, this.data);
+      this._emitDataDirtyChange(false);
+      if (this.onFlush) {
+        await this.onFlush(event, context, this.data);
+      }
+    },
+    async perform(event, context, flush = true) {
       if (this.auto && !this.ready) return null;
       if (!this.onPerform) return null;
       // perform before, need not wrapper error/exception
-      await this._invokePerformBefore(event, context);
+      await this._invokePerformBefore(event, context, this.data);
       // perform
       try {
-        const data = await this.onPerform(event, context);
-        this.reset();
+        const data = await this.onPerform(event, context, this.data);
         // perform after
         await this._invokePerformAfter(event, context, null, data);
+        // flush
+        if (flush) {
+          await this.flush(event, context);
+        }
         // ok
         return data;
       } catch (err) {
@@ -172,7 +225,8 @@ export default {
           await this._invokePerformAfter(event, context, err, null);
           // inner handle
           if (err.code !== 422) throw err;
-          this.verrors = err.message;
+          const errMessage = JSON.parse(err.message);
+          this.verrors = errMessage;
           this.$emit('errorsSet', this.verrors);
           const _err = new Error(this.$text('Data Validation Error'));
           _err.code = -422;
@@ -181,8 +235,8 @@ export default {
       }
     },
     // not wrapper error/exception
-    async _invokePerformBefore(event, context) {
-      const params = { event, context };
+    async _invokePerformBefore(event, context, data) {
+      const params = { event, context, data };
       // callbacks
       if (this.callbacksPerformBefore && this.callbacksPerformBefore.length > 0) {
         for (const cb of this.callbacksPerformBefore) {
@@ -254,16 +308,18 @@ export default {
     },
     async fetchSchema() {
       if (this.meta && this.meta.schema) {
-        this.schemaModuleName = this.meta.schema.module || this.$page.$module.name;
+        this.schemaModuleName = this.meta.schema.module || this.$pageContainer.$module.name;
         await this.$meta.module.use(this.schemaModuleName);
         await this.__schemaReady(this.meta.schema.schema, this.schemaModuleName);
         return;
       }
       if (!this.params) return;
-      const moduleName = this.params.module || this.$page.$module.name;
+      const moduleName = this.params.module || this.$pageContainer.$module.name;
       this.schemaModuleName = moduleName;
       await this.$meta.module.use(moduleName);
-      const data = await this.$api.post('/a/validation/validation/schema', {
+      // useStore
+      const useStoreSchemas = await this.$store.use('a/validation/schemas');
+      const data = await useStoreSchemas.getSchema({
         module: moduleName,
         validator: this.params.validator,
         schema: this.params.schema,
@@ -307,6 +363,15 @@ export default {
       this.$emit('schema:ready', this.schema);
       this.$emit('schemaReady', this.schema);
     },
+    __getDevValidateParams() {
+      if (this.$meta.config.env !== 'development') return null;
+      if (!this.params) return null;
+      const data = [];
+      if (this.params.module) data.module = this.params.module;
+      if (this.params.validator) data.validator = this.params.validator;
+      if (this.params.schema) data.schema = this.params.schema;
+      return this.$meta.util.combineParams(data);
+    },
     // async __schemaReady_patchSchema(schema) {
     //   await this.__schemaReady_patchSchema_properties(schema.properties);
     // },
@@ -322,7 +387,17 @@ export default {
     //   }
     // },
     renderSchema() {
-      return <validateItem parcel={this.parcel} dataKey={null} property={null} meta={null} root={true}></validateItem>;
+      const devValidateParams = this.__getDevValidateParams();
+      return (
+        <validateItem
+          data-dev-validate-params={devValidateParams}
+          parcel={this.parcel}
+          dataKey={null}
+          property={null}
+          meta={null}
+          root={true}
+        ></validateItem>
+      );
     },
     onSubmit(event) {
       this.$emit('submit', event);

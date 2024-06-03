@@ -40,7 +40,13 @@ module.exports = context => {
         // if (options.extract) {
         //   return [ MiniCssExtractPlugin.loader ].concat(loaders);
         // }
-        return ['vue-style-loader'].concat(loaders);
+        const vueStyleLoader = {
+          loader: '@zhennann/vue-style-loader',
+          // options: {
+          //   isGlobal: true,
+          // },
+        };
+        return [vueStyleLoader].concat(loaders);
       }
 
       // http://vuejs.github.io/vue-loader/en/configurations/extract-css.html
@@ -69,17 +75,18 @@ module.exports = context => {
     },
     copyModules() {
       // runtime path
-      const runtimePath = path.join(context.config.frontPath, '__runtime');
+      const runtimePath = path.join(context.config.projectPath, 'src/front/__runtime');
       // static path
-      const staticPath = path.join(context.config.build.assetsRoot, context.config.build.assetsSubDirectory);
+      // const staticPath = path.join(context.config.build.assetsRoot, context.config.build.assetsSubDirectory);
 
       // modules
-      const { modules, modulesGlobal } = mglob.glob(
-        context.config.projectPath,
-        context.config.configProject.base.disabledModules,
-        context.config.configProject.base.disabledSuites,
-        true
-      );
+      const { modules, modulesGlobal } = mglob.glob({
+        projectPath: context.config.projectPath,
+        disabledModules: context.config.configProject.base.disabledModules,
+        disabledSuites: context.config.configProject.base.disabledSuites,
+        log: true,
+        type: 'front',
+      });
 
       // clear
       fse.emptyDirSync(runtimePath);
@@ -87,6 +94,7 @@ module.exports = context => {
 
       // global modules
       const __terserPluginExcludes = [];
+      let jsImportStatic = '';
       for (const relativeName in modulesGlobal) {
         const module = modules[relativeName];
         // terser
@@ -101,9 +109,14 @@ module.exports = context => {
         if (fse.existsSync(fileSrc)) fse.copySync(fileSrc, fileDest);
         // copy static
         fileSrc = `${module.root}/dist/static`;
-        if (fse.existsSync(fileSrc)) fse.copySync(fileSrc, staticPath);
         fileDest = path.join(runtimePath, 'modules', relativeName, 'dist/static');
         if (fse.existsSync(fileSrc)) fse.copySync(fileSrc, fileDest);
+        // require context
+        if (fse.existsSync(fileSrc)) {
+          // fse.copySync(fileSrc, staticPath);
+          const fileSrcStatic = fileSrc.replace(/\\/g, '/');
+          jsImportStatic += `\nimportStatic(require.context('${fileSrcStatic}'));\n`;
+        }
       }
       context.config.build.__terserPluginExcludes = __terserPluginExcludes;
 
@@ -124,7 +137,7 @@ module.exports = context => {
 modules['${relativeName}'] = {
    instance: require('${jsFront}'),
    info: ${JSON.stringify(module.info)},
-}
+};
 `;
         } else {
           jsModules += `
@@ -145,6 +158,10 @@ modules['${relativeName}'] = {
 
       // save to modules.js
       const modulesJS = `
+function importStatic(r) {
+  r.keys().forEach(r);
+}      
+${jsImportStatic}      
 const modules = {};
 const modulesSync = {};
 const modulesMonkey = {};
@@ -171,6 +188,10 @@ export default {
       return path.join(__dirname, '../', filename);
     },
     babelLoaderOptions() {
+      const pluginsExclude =
+        process.env.NODE_ENV === 'production'
+          ? []
+          : ['@babel/plugin-transform-regenerator', '@babel/plugin-proposal-async-generator-functions'];
       return {
         babelrc: false,
         presets: [
@@ -180,6 +201,7 @@ export default {
             {
               modules: false,
               useBuiltIns: false,
+              exclude: pluginsExclude,
             },
           ],
         ],

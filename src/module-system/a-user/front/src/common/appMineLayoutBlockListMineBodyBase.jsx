@@ -41,7 +41,7 @@ export default {
     base_appInfoCurrent() {
       if (!this.ready) return;
       if (!this.$meta.vueLayout.started) return;
-      this.init_fetchDataAll();
+      this.init_reload();
     },
   },
   created() {
@@ -54,16 +54,31 @@ export default {
   methods: {
     async init() {
       this.init_layoutConfig();
-      await this.init_categoriesAll();
-      await this.init_fetchDataAll();
+      await this.init_reload();
       if (this.onInit) {
         await this.onInit();
       }
       this.ready = true;
     },
+    async init_reload() {
+      await this.init_categoriesAll();
+      await this.init_fetchDataAll();
+      await this.init_preloadModules();
+    },
+    async init_preloadModules() {
+      const useStoreApp = await this.$store.use('a/app/app');
+      const appInfoCurrent = this.layoutManager.base.appInfoCurrent;
+      const appKey = appInfoCurrent.appKey;
+      useStoreApp.preloadModules({ appKey });
+    },
     init_layoutConfig() {},
     async init_categoriesAll() {
-      this.categoryTree = await this.$store.dispatch('a/base/getCategoryTreeResource', { resourceType: 'a-base:mine' });
+      const appInfoCurrent = this.layoutManager.base.appInfoCurrent;
+      const appKey = appInfoCurrent.appKey;
+      this.categoryTree = await this.$store.dispatch('a/base/getCategoryTreeResourceMenu', {
+        resourceType: 'a-base:mine',
+        appKey,
+      });
     },
     async init_fetchDataAll() {
       await this.layoutManager.page_onRefresh();
@@ -127,10 +142,12 @@ export default {
     _renderGroup(group) {
       const children = [];
       for (const item of group.items) {
+        const devResourceKey = this.$meta.config.env === 'development' ? item.atomStaticKey : null;
         const domItem = (
           <eb-list-item
-            class="item"
+            class="item item-after-chevron-none item-line-height-compact"
             key={item.atomId}
+            data-dev-resource-key={devResourceKey}
             link="#"
             title={item.atomNameLocale}
             propsOnPerform={event => this.onItemClick(event, item)}

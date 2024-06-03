@@ -1,7 +1,7 @@
 // see http://vuejs-templates.github.io/webpack for documentation.
 const path = require('path');
 const { merge } = require('webpack-merge');
-const extend = require('extend2');
+const extend = require('@zhennann/extend');
 const os = require('os');
 const webpack = require('webpack');
 const fse = require('fs-extra');
@@ -23,6 +23,7 @@ module.exports = (context, cb) => {
         SCENE: JSON.stringify(sceneValue),
         PROJECTPATH: JSON.stringify(context.projectPath),
         FRONTPATH: JSON.stringify(context.frontPath),
+        DEBUG: JSON.stringify(process.env.DEBUG),
       },
     },
     dev: {
@@ -30,16 +31,21 @@ module.exports = (context, cb) => {
         SCENE: JSON.stringify(sceneValue),
         PROJECTPATH: JSON.stringify(context.projectPath),
         FRONTPATH: JSON.stringify(context.frontPath),
+        DEBUG: JSON.stringify(process.env.DEBUG),
       },
     },
   };
 
   // dist
-  const distPath = path.resolve(__dirname, `../dist${sceneValue ? '/' + sceneValue : ''}`);
+  const distPath = path.join(context.projectPath, `src/front/__dist${sceneValue ? '/' + sceneValue : ''}`);
 
   // entry
   const entryDefault = path.join(context.projectPath, 'src/front/config/config.default.js');
   const entryScene = path.join(context.projectPath, `src/front/config/config.${sceneValue}.js`);
+  if (!fse.existsSync(entryDefault)) {
+    console.log(chalk.red('Please copy directory: from _config to config\n'));
+    process.exit(0);
+  }
   if (!fse.existsSync(entryScene)) {
     console.log(chalk.red(`  Scene Config File Not Found:\n  ${entryScene}\n`));
     process.exit(0);

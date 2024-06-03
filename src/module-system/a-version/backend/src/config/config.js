@@ -21,10 +21,18 @@ module.exports = appInfo => {
     },
   };
 
+  // broadcasts
+  config.broadcasts = {
+    columnsClear: {
+      bean: 'columnsClear',
+      instance: false,
+    },
+  };
+
   // worker
   config.worker = {
     alive: {
-      timeout: 6000,
+      timeout: 7000,
     },
   };
 

@@ -1,5 +1,438 @@
 # History
 
+## 2023-XX-XX, Version 5.0.12-alpha
+
+- **Feat**
+
+- atom right aux
+- vue-plugin-debug
+  - 在前端输出调试信息: DEBUG=layout npm run dev:front
+
+## 2023-11-27, Version 5.0.11-alpha
+
+- **Feat**
+
+- atomState 支持两种字典：静态字典、动态字典
+  - 动态字典由绑定的工作流自动生成，方便检索数据
+- renderFreeze: render 冻结机制
+- 城市字典：支持拼音模糊查询
+
+## 2023-11-22, Version 5.0.10-alpha
+
+- **Feat**
+
+- 支持 pnpm
+  - 1. sudo npm install -g pnpm
+  - 2. pnpm install
+- 新增：ctx.meta.util.runInBackground
+
+## 2023-11-20, Version 5.0.9-alpha
+
+- **Feat**
+
+- 重构 ctx.meta.util.performAction
+- 采用 ctx.meta.util.performAction 重构单元测试用例
+- error code：增加模块名称作为前缀，便于排查问题来源
+
+- **Refactor**
+
+- 重构工作流网关实现：排他网关、并行网关、包含网关
+
+## 2023-11-10, Version 5.0.8-alpha
+
+- **Feat**
+
+- 新增 demo 工具，方便在开发时，随时调试一些临时逻辑
+  - 方式 1: 命令行执行：npm run cli :tools:demo execute
+  - 方式 2: 浏览器直接访问：/api/a/clibooster/tools/demo/execute
+  - 注意事项 1: execute 为默认方法，可以替换为其他方法
+  - 注意事项 2: 自动在 src/backend 追加文件：demo.js
+
+## 2023-11-05, Version 5.0.7-alpha
+
+- **Feat**
+
+  - 新增 create delay 机制：将之前的 create 和 write 逻辑合二为一，提升性能
+  - 新增 atom 组件的 default 方法，可以直接获取业务数据的初始值
+  - 将 atom 组件由 app 模式改为 ctx 模式
+  - 系统启动时的静态数据初始化：由之前的 50 秒优化至 15 秒
+
+## 2023-11-04, Version 5.0.6-alpha
+
+- **Feat**
+
+  - validate 表单
+    - 增加 flush/reset 机制
+  - 新增模块：a-dictarea：国家字典、中国城市字典、美国城市字典
+  - 实现字典字段联动
+
+- **Refactor**
+
+  - fields.mappings
+    - userIds/userIdCreated/atomName/atomMedia/atomMediaLabel/lineNo
+  - fields.dicts
+    - atomState
+    - others
+
+## 2023-10-26, Version 5.0.5-alpha
+
+- **Feat**
+
+  - App Monkey：
+    - 提供应用级别的 monkey 机制，从而可以修改任何模块的任何代码、任何配置
+    - 比如修改 module 的 meta 配置
+    - 参见/path to project/src/backend/config/monkey.js
+  - 移除 require3 机制
+  - Form 表单：更加灵活的字段分栏布局
+  - Atom Action：增加表单功能
+  - Atom Action：增加与流程节点类似的 atomState、fieldsRight、fieldsMapping 机制
+
+- **Refactor**
+
+  - 与 meta 相关的文件统一从 config 目录转移至 meta 目录
+  - 重构 History 数据的权限机制
+
+## 2023-09-24, Version 5.0.4-alpha
+
+- **Feat**
+
+  - 工作流引擎重构
+    - 目标：业务表单与流程表单合二为一
+    - 重构 timeline 组件
+    - 精确控制对流程进度的访问权限
+  - modelCache 机制
+    - 在 summer 二级缓存基础上提供 model 缓存机制，任何 model 都可以非常便利的添加缓存机制
+  - $view.createModal：提供动态创建各类模式框的机制
+    - Sheet, Popover, Dialog, etc.
+  - mobile 页面：当向下滚动时，默认动态隐藏导航栏
+
+- **Enhance**
+
+  - 静态数据启动项：提升性能，提供友好提示信息
+
+- **Fix**
+
+  - 修复在 Safari 中登录验证码图片失效的问题
+
+- **Chore**
+
+  - 调整 require3 目录结构
+  - 调整 version.manager 目录结构
+  - 增强 vm2 沙箱隔离机制
+  - $page与$pageContainer 重构
+  - 增强 subnavbar 组件的动态显示机制
+
+## 2023-08-29, Version 5.0.3-alpha
+
+- **Feat**
+
+  - 字段权限
+    - 支持在所有业务数据中配置
+    - 支持在流程中配置
+
+## 2023-07-28, Version 5.0.2-alpha
+
+- **Feat**
+
+  - Detail：基于 ItemOnly 重构，延用 Atom 的同一套前端页面组件和后端 API 逻辑
+    - test-flow 模块中`采购订单明细`进行重构
+
+## 2023-05-15, Version 5.0.1-alpha
+
+- **Feat**
+
+  - ItemOnly：Atom 降级策略
+  - AtomClass 分为四类：
+    - Business, Inner, Runtime, Detail
+    - 业务数据，内部数据，运行数据，明细数据
+  - ebType: atomClassId
+  - 基于 pinia 管理数据状态
+    - 将工具从 egg-born-front 中移出，并重构：clipboard、fullscreen、sandbox、visibilityChange
+  - 角色数据授权：CRUD/基于角色的展开模式/基于用户的展开模式
+  - CreateDelay 模式
+
+- **Enhance**
+
+  - webpack: 添加基于文件系统的缓存，前端服务启动时间明显缩短
+  - atom bean 组件：增加 selectQuery 和 readQuery
+  - npm run cli：支持自动启动后端服务，用完自动销毁
+  - ebType: atomClass
+
+## 2023-03-24, Version 5.0.0-alpha
+
+- **Feat**
+
+  - 二级分布式缓存：Summer
+
+    - 业务模块: a-summer
+    - 一级：内存分布式缓存
+    - 二级：Redis 分布式缓存
+    - 增加 Summer 缓存用例，减少查库次数：atomClassInfo/atomClassInner/roleScopesOfUser/userInfo/categoryInfo
+
+  - 性能优化
+    - 查询数据：权限匹配优化
+    - 查询数据：基于 summer 缓存提升查询性能，从而移除多表联合查询机制：aAtomClass/aUser/aCategory/aFlow
+
+## 2023-03-10, Version 4.30.3
+
+- **Feat**
+
+  - 草稿两阶段提交：
+
+    1. 先提交一次保存，如果有数据验证失败，则进行提示
+    2. 如果数据验证成功，则弹出提交确认框
+    3. 将草稿提交，以便生成正式数据
+
+  - 新增脚本命令
+
+    1. npm run release
+    2. npm run release:front
+    3. npm run release:backend
+
+  - 旧项目：在 package.json 文件中增加如下脚本配置：
+
+```javascript
+"scripts": {
+  ...
+  "release": "egg-born-bin release",
+  "release:front": "egg-born-bin release-front",
+  "release:backend": "egg-born-bin release-backend",
+  ...
+}
+```
+
+## 2023-03-08, Version 4.30.1
+
+- **Feat**
+
+  - 1. 增加核心模块 a-wasmgo: 用于加载 go wasm 模块
+    - 参见文档：[https://cabloy.com/zh-cn/articles/go-wasm.html](https://cabloy.com/zh-cn/articles/go-wasm.html)
+
+## 2023-03-06, Version 4.29.21
+
+1. 增加 Cli 指令：创建原子自定义指令
+
+```bash
+$ npm run cli :create:atomAction actionName -- [--actionCode=] [--module=] [--atomClassName=]
+```
+
+> 参见文档：[原子指令-自定义指令(Cli 创建)](https://cabloy.com/zh-cn/articles/atom-action-custom-cli.html)
+
+2. 增加 Cli 指令：创建表格单元格的渲染组件
+
+```bash
+$ npm run cli :front:renderTableCell componentName -- [--module=]
+```
+
+## 2023-03-03, Version 4.29.19
+
+- **Feat**
+
+  - 增加创建 App 应用的 Cli 指令：
+
+```bash
+$ npm run cli :create:app appName -- [--module=]
+```
+
+- 如果您只有一个应用，那么可以把这个应用设置为初始应用，从而实现打开网页时默认显示该应用
+
+`src/front/config/config.default.js`
+
+```javascript
+modules: {
+  'a-app': {
+    appInit: {
+      default: {your app key},
+    },
+  },
+}
+```
+
+## 2023-03-01, Version 4.29.15
+
+- **Feat**
+
+  - 数据指令：
+    - 工具条/弹出菜单：增加 Color 显示，使功能分区更加醒目
+
+## 2023-02-18, Version 4.29.0
+
+- **Feat**
+
+  - 工作流引擎
+    - 新思路：工作流 = 审批流程 + 业务流程
+    - 审批流程：用于草稿副本的流转：如博客文章
+    - 业务流程：用于正式副本的流转：如采购订单
+    - 新增字段 atomState: 用于标记数据当前状态，与工作流配合使用
+    - 新增参与人变量：auto，用于动态拾取流程节点的参与人
+  - Table 表格
+    - 单击数据行，直接显示指令工具条，让业务处理更加触手可得
+  - Cli 引擎
+    - 新增命令: npm run cli :git:commit
+
+- **Refactor**
+  - 原子数据：
+    - 在进行副本拷贝时以基础 schema 为准，进行字段过滤
+    - create 方法增加 createOptions 参数，为副本拷贝提供额外线索信息
+    - 不再需要指定配置: fields.custom
+    - write 方法中不再需要 data.id = key.itemId;
+
+## 2023-01-08, Version 4.28.20
+
+- **Feat**
+
+  - 工作台：在九宫格中每个应用的 DOM 节点增加属性：`data-dev-app-key`，方便快速定位 AppKey
+  - Cli 终端命令：创建前端页面组件，支持带目录的名称，比如: `npm run cli :create:pagex student/add`
+  - ctx.bean.util.extend 代替 const extend = require('@zhennann/extend');
+  - ctx.bean.util.uuid 代替 const uuid = require('uuid');
+
+- **Enhance**
+  - 时间字段：在表格中默认采用多行模式：`ebParams.dateFormat.lines=true`
+
+## 2023-01-02, Version 4.28.13
+
+- **Feat**
+  - 状态栏: 增加语言切换按钮
+  - test-party 套件: UI 组件演示页面：显示源码链接，方便直接查看实现方式
+
+## 2022-12-29, Version 4.28.7
+
+- **Feat**
+  - test-party 套件：创建一个独立的 App 应用：UI 组件，从而可以更加便利直观的查看 CabloyJS 和 Framework7 提供的 UI 组件库
+
+## 2022-12-28, Version 4.28.6
+
+- **Feat**
+  - 静态原子数据：可以通过重载方法 prepareStaticItem，对静态数据进行调整
+
+## 2022-12-27, Version 4.28.4
+
+- **Feat**
+  - 草稿优化：
+    - 在编辑保存时不验证必填项（回归草稿的本质）
+    - 在提交时验证必填项
+
+## 2022-12-23, Version 4.28.0
+
+- **Feat**
+  - App Theme: 可以为 App 应用设置独立的 Theme 主题
+    - 参见: [如何创建 App 应用](https://cabloy.com/zh-cn/articles/app-create.html)
+  - App Mine 页面（个人信息页面）: 不再强制弹出
+  - Clipboard 工具：弃用 clipboard.js，改用 copy-to-clipboard
+
+## 2022-12-18, Version 4.27.11
+
+- **Feat**
+
+  - 原子类型：可以配置是否启用评论、附件
+
+- **Enhance**
+  - 草稿统计值
+    1. 草稿统计值 = 起草中 + 流转(审批)中
+    2. 每个原子类型都有独立的统计值
+    3. 在原子列表页面：显示草稿统计值，以便最快方式查看并处理草稿
+       - 有草稿时显示，无草稿时隐藏
+  - 编辑页面
+    - Save 的提示改为：Save as Draft
+    - Submit 的提示改为：Save and Submit
+
+## 2022-12-15, Version 4.27.9
+
+- **Feat**
+  - 原子类型提供 meta 参数：comment/attachment
+
+## 2022-12-14, Version 4.27.7
+
+- **Feat**
+  - 新增表单字段渲染组件: `ebType: 'button'`
+
+## 2022-12-10, Version 4.27.1
+
+- **Feat**
+  - 新增区域授权机制
+    - 默认未开启，处于内部开发测试阶段
+
+## 2022-12-04, Version 4.26.25
+
+- **Refactor**
+  - PC 布局：界面优化
+  - App 目录调整：
+    - General -> AppCategoryFront
+    - Management -> AppCategoryBackend
+    - System -> AppCategoryManagement
+
+## 2022-11-16, Version 4.26.11
+
+- **Feat**
+  - 方便替换登录页
+  - 方便隐藏导航栏
+
+## 2022-11-16, Version 4.26.10
+
+- **Feat**
+  - 应用菜单管理：归属于应用的菜单目录独立管理，便于调整目录显示次序
+
+## 2022-11-13, Version 4.26.8
+
+- **Feat**
+  - 图片处理：采用 jimp，弃用 gm，从而实现零依赖，简化安装
+
+## 2022-11-04, Version 4.26.4
+
+- **Feat**
+  - 增加模块预加载机制： Vue.prototype.$meta.util.preloadModules
+
+## 2022-10-28, Version 4.26.0
+
+- **Feat**
+  - 增加 CDN 支持
+    - [腾讯云 COS](https://cabloy.com/zh-cn/articles/qcloud-cos.html)
+    - [阿里云 OSS](https://cabloy.com/zh-cn/articles/aliyun-oss.html)
+
+## 2022-10-21, Version 4.25.9
+
+- **Feat**
+  - add css class to the eb-page dom element
+
+## 2022-10-16, Version 4.25.5
+
+- **Feat**
+  - open app: target
+
+## 2022-10-16, Version 4.25.4
+
+- **Feat**
+  - eb-page: ebHideNavbarOnScroll/ebHideToolbarOnScroll
+
+## 2022-10-15, Version 4.25.3
+
+- **Feat**
+  - device.host: wechat/wxwork/dingtalk
+  - device.hostEnabled
+
+## 2022-10-15, Version 4.25.2
+
+- **Refactor**
+  - bullmq 从 1.X 升级至 2.X
+    - redis 最低版本: 6.2.0
+
+## 2022-10-14, Version 4.25.0
+
+- **Refactor**
+  - vue 从 2.6 升级至 2.7
+
+## 2022-10-14, Version 4.24.0
+
+- **Refactor**
+  - 重构 mysql 驱动，支持最新版验证机制
+
+## 2022-10-10, Version 4.23.0
+
+- **Refactor**
+  - 重构 Socket IO 引擎
+  - 重构进度条
+  - 重构 Notification 组件
+
 ## 2022-06-30, Version 4.22.0
 
 - **Feat**

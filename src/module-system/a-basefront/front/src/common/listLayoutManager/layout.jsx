@@ -16,19 +16,28 @@ export default {
       const key = this.order_getKey(atomOrder);
       return key === `a.${columnName}` || key === `f.${columnName}` || key === columnName;
     },
+    layout_onGetLayoutKeyBase() {
+      let layoutKeyBase = this.container.layoutKeyBase;
+      if (!layoutKeyBase) {
+        const atomClassBase = this.base.atomClassBase;
+        layoutKeyBase =
+          atomClassBase && atomClassBase.itemOnly
+            ? 'a-basefront:layoutItemOnlyListBase'
+            : 'a-basefront:layoutAtomListBase';
+      }
+      return layoutKeyBase;
+    },
     async layout_onPrepareConfigFull() {
-      const atomClass = this.container.atomClass;
-      const atomClassBase = atomClass ? this.getAtomClass(atomClass) : null;
+      const atomClass = this.base.atomClass;
+      const atomClassBase = this.base.atomClassBase;
       // atom base
-      let layoutItem = await this.$store.dispatch('a/baselayout/getLayoutItem', {
-        layoutKey: 'a-basefront:layoutAtomListBase',
-      });
+      const layoutKeyBase = this.layout_onGetLayoutKeyBase();
+      const useStoreLayout = await this.$store.use('a/baselayout/layout');
+      let layoutItem = await useStoreLayout.getLayoutItem({ layoutKey: layoutKeyBase });
       this.base.configAtomBase = layoutItem.content;
       // atom cms
       if (atomClass && atomClassBase.cms) {
-        layoutItem = await this.$store.dispatch('a/baselayout/getLayoutItem', {
-          layoutKey: 'a-cms:layoutAtomListCms',
-        });
+        layoutItem = await useStoreLayout.getLayoutItem({ layoutKey: 'a-cms:layoutAtomListCms' });
         this.base.configAtomCms = layoutItem.content;
       }
       // atom
@@ -36,9 +45,7 @@ export default {
         let atomLayoutKey = this.$meta.util.getProperty(atomClassBase, 'layout.config.atomList');
         atomLayoutKey = this.$meta.util.normalizeResourceKey(atomLayoutKey, atomClass.module);
         if (atomLayoutKey) {
-          layoutItem = await this.$store.dispatch('a/baselayout/getLayoutItem', {
-            layoutKey: atomLayoutKey,
-          });
+          layoutItem = await useStoreLayout.getLayoutItem({ layoutKey: atomLayoutKey });
           this.base.configAtom = layoutItem.content;
         }
       }

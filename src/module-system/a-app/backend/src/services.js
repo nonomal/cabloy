@@ -1,4 +1,2 @@
-module.exports = app => {
-  const services = {};
-  return services;
-};
+const resource = require('./service/resource.js');
+module.exports = { resource };

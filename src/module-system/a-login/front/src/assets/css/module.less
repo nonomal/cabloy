@@ -10,30 +10,33 @@
     margin-bottom: unset;
   }
 
-  .login-screen-page {
+  .eb-login-container {
+    width: 100%;
+    overflow: scroll;
+
+    .list-button {
+      text-align: center;
+      color: var(--f7-login-screen-list-button-text-color, var(--f7-theme-color));
+      &:hover {
+        color: #fb9337;
+      }
+    }
+
     .close {
       position: absolute;
       top: 16px;
       left: 16px;
     }
 
-    .login-screen-title.sub-title {
-      font-size: 20px;
+    .login-screen-title {
+      .sub-title {
+        font-size: 20px;
+      }
     }
 
-    .line {
-      height: 1px;
+    .divider-line {
       margin: 30px 0;
       text-align: center;
-      border-top: 1px solid var(--f7-text-editor-border-color);
-
-      .text {
-        position: relative;
-        top: -10px;
-        background: var(--f7-page-bg-color);
-        display: inline-block;
-        padding: 0 8px;
-      }
     }
 
     .btns {

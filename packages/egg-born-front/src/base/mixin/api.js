@@ -1,6 +1,10 @@
 import axios from 'axios';
+import bodyCryptoFn from '../bodyCrypto.js';
 
 export default function (Vue) {
+  // bodyCrypto
+  const bodyCrypto = bodyCryptoFn(Vue);
+
   // axios
   Vue.prototype.$meta.axios = axios;
 
@@ -13,7 +17,18 @@ export default function (Vue) {
     // response
     axios.interceptors.response.use(
       function (response) {
-        if (response.headers['content-type'].indexOf('application/json') === -1) return response;
+        bodyCrypto.decrypt(response);
+        return response;
+      },
+      function (error) {
+        bodyCrypto.decrypt(error.response);
+        throw error;
+      }
+    );
+    axios.interceptors.response.use(
+      function (response) {
+        const contentType = response.headers['content-type'];
+        if (!contentType || contentType.indexOf('application/json') === -1) return response;
         if (response.data.code !== 0) {
           const error = new Error();
           error.code = response.data.code;
@@ -38,6 +53,11 @@ export default function (Vue) {
     );
 
     // add a request interceptor
+    axios.interceptors.request.use(function (config) {
+      bodyCrypto.encrypt(config);
+      return config;
+    });
+
     axios.interceptors.request.use(
       function (config) {
         // jwt

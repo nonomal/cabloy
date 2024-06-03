@@ -1,37 +1,29 @@
 const config = require('./config/config.js');
 const locales = require('./config/locales.js');
 const errors = require('./config/errors.js');
-const IAuthProviderBaseFn = require('./bean/local.authProviderBase.js');
+const AuthProviderBase = require('./bean/local.authProviderBase.js');
+const aops = require('./aops.js');
 
-module.exports = app => {
-  // base
-  app.meta.IAuthProviderBase = IAuthProviderBaseFn;
+// base
+module.meta.class.AuthProviderBase = AuthProviderBase;
 
-  // aops
-  const aops = require('./aops.js')(app);
-  // beans
-  const beans = require('./beans.js')(app);
-  // routes
-  const routes = require('./routes.js')(app);
-  // controllers
-  const controllers = require('./controllers.js')(app);
-  // services
-  const services = require('./services.js')(app);
-  // models
-  const models = require('./models.js')(app);
-  // meta
-  const meta = require('./meta.js')(app);
+const beans = require('./beans.js');
+const routes = require('./routes.js');
+const controllers = require('./controllers.js');
+const services = require('./services.js');
+const models = require('./models.js');
+// meta
+const meta = require('./meta.js');
 
-  return {
-    aops,
-    beans,
-    routes,
-    controllers,
-    services,
-    models,
-    config,
-    locales,
-    errors,
-    meta,
-  };
+module.exports = {
+  aops,
+  beans,
+  routes,
+  controllers,
+  services,
+  models,
+  config,
+  locales,
+  errors,
+  meta,
 };

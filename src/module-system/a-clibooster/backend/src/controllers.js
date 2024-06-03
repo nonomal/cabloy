@@ -1,4 +1,5 @@
-module.exports = app => {
-  const controllers = {};
-  return controllers;
+const tools = require('./controller/tools.js');
+
+module.exports = {
+  tools,
 };

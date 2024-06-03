@@ -36,7 +36,7 @@
           "a-authsms": {
             "scripts": ["npmPublish"]
           },
-          "a-base-sync": {
+          "a-baseaction": {
             "scripts": ["npmPublish"]
           },
           "a-baseadmin": {
@@ -45,7 +45,19 @@
           "a-basefront": {
             "scripts": ["npmPublish"]
           },
+          "a-basefront2": {
+            "scripts": ["npmPublish"]
+          },
           "a-baselayout": {
+            "scripts": ["npmPublish"]
+          },
+          "a-baserender": {
+            "scripts": ["npmPublish"]
+          },
+          "a-baserendertable": {
+            "scripts": ["npmPublish"]
+          },
+          "a-basestore": {
             "scripts": ["npmPublish"]
           },
           "a-cache": {
@@ -81,10 +93,16 @@
           "a-dashboardbooster": {
             "scripts": ["npmPublish"]
           },
+          "a-debug": {
+            "scripts": ["npmPublish"]
+          },
           "a-detail": {
             "scripts": ["npmPublish"]
           },
           "a-dict": {
+            "scripts": ["npmPublish"]
+          },
+          "a-dictarea": {
             "scripts": ["npmPublish"]
           },
           "a-dictbooster": {
@@ -94,6 +112,9 @@
             "scripts": ["npmPublish"]
           },
           "a-event": {
+            "scripts": ["npmPublish"]
+          },
+          "a-fields": {
             "scripts": ["npmPublish"]
           },
           "a-file": {
@@ -111,6 +132,9 @@
           "a-flownode": {
             "scripts": ["npmPublish"]
           },
+          "a-flowtimeline": {
+            "scripts": ["npmPublish"]
+          },
           "a-host": {
             "scripts": ["npmPublish"]
           },
@@ -118,6 +142,9 @@
             "scripts": ["npmPublish"]
           },
           "a-iconbooster": {
+            "scripts": ["npmPublish"]
+          },
+          "a-clipboard": {
             "scripts": ["npmPublish"]
           },
           "a-index": {
@@ -130,6 +157,9 @@
             "scripts": ["npmPublish"]
           },
           "a-layoutmobile": {
+            "scripts": ["npmPublish"]
+          },
+          "a-lazyload": {
             "scripts": ["npmPublish"]
           },
           "a-login": {
@@ -156,7 +186,16 @@
           "a-photobrowser": {
             "scripts": ["npmPublish"]
           },
+          "a-pinyin": {
+            "scripts": ["npmPublish"]
+          },
           "a-progress": {
+            "scripts": ["npmPublish"]
+          },
+          "a-sandbox": {
+            "scripts": ["npmPublish"]
+          },
+          "a-screenfull": {
             "scripts": ["npmPublish"]
           },
           "a-sequence": {
@@ -168,13 +207,16 @@
           "a-share": {
             "scripts": ["npmPublish"]
           },
-          "a-socketio": {
-            "scripts": ["npmPublish"]
-          },
           "a-stats": {
             "scripts": ["npmPublish"]
           },
           "a-status": {
+            "scripts": ["npmPublish"]
+          },
+          "a-summer": {
+            "scripts": ["npmPublish"]
+          },
+          "a-swiper": {
             "scripts": ["npmPublish"]
           },
           "a-themebrilliant": {
@@ -193,6 +235,9 @@
             "scripts": ["npmPublish"]
           },
           "a-version": {
+            "scripts": ["npmPublish"]
+          },
+          "a-wasmgo": {
             "scripts": ["npmPublish"]
           },
           "cms-pluginarticle": {
@@ -246,6 +291,9 @@
           "cms-themedocs": {
             "scripts": ["npmPublish"]
           },
+          "a-base-sync": {
+            "scripts": ["npmPublish", "gitCommit"]
+          },
           "a-flownodebooster": {
             "scripts": ["gitCommit"]
           },
@@ -258,10 +306,22 @@
           "a-markdown": {
             "scripts": ["npmPublish", "gitCommit"]
           },
+          "a-socketio": {
+            "scripts": ["npmPublish", "gitCommit"]
+          },
+          "bz-login": {
+            "scripts": ["gitCommit"]
+          },
           "test-flow": {
             "scripts": ["gitCommit"]
           },
           "test-note": {
+            "scripts": ["gitCommit"]
+          },
+          "test-userpro-monkey": {
+            "scripts": ["gitCommit"]
+          },
+          "a-paypal": {
             "scripts": ["gitCommit"]
           },
           "a-wechat": {
@@ -273,10 +333,41 @@
           "a-dingtalk": {
             "scripts": ["gitCommit"]
           },
+          "bz-diancai": {
+            "scripts": ["gitCommit"]
+          },
           "test-party": {
             "scripts": ["gitCommit"]
           }
         }
+      },
+      "sync": {
+        "entities": {}
+      }
+    }
+  },
+  "cli": {
+    "commands": {
+      ":git:commit": {
+        "entities": [
+          "a-base-sync",
+          "a-flownodebooster",
+          "a-flowtask",
+          "a-layoutpc",
+          "a-markdown",
+          "a-socketio",
+          "bz-login",
+          "test-flow",
+          "test-note",
+          "test-userpro-monkey",
+          "a-paypal",
+          "a-wechat",
+          "a-wxwork",
+          "a-dingtalk",
+          "bz-diancai",
+          "cabloy-store",
+          "test-party"
+        ]
       }
     }
   }

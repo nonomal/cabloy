@@ -20,27 +20,21 @@ export default {
   },
   created() {},
   methods: {
-    onPerformAtomOrders(event) {
-      this.layoutManager.order_onPerformPopover(event.currentTarget);
-    },
-    onPerformFilter() {
-      this.layoutManager.filter_onPerform();
-    },
     onPerformDone() {
       // ok
-      const selectMode = this.layoutManager.container.params.selectMode;
+      const selectMode = this.layoutManager.container.params?.selectMode;
       const res = selectMode === 'single' ? this.selectedAtoms[0] : this.selectedAtoms;
       this.layoutManager.contextCallback(200, res);
       this.$f7router.back();
     },
   },
   render() {
-    return (
-      <f7-nav-right>
-        <eb-link iconF7="::sort" propsOnPerform={event => this.onPerformAtomOrders(event)}></eb-link>
-        <eb-link iconF7="::search" propsOnPerform={this.onPerformFilter}></eb-link>
-        {this.selectedAtoms.length > 0 && <eb-link iconF7="::done" propsOnPerform={this.onPerformDone}></eb-link>}
-      </f7-nav-right>
-    );
+    const domActions = this.layoutManager.bulk_renderActionsNormalDefault();
+    if (this.selectedAtoms.length > 0) {
+      domActions.push(
+        <eb-link iconF7="::done" tooltip={this.$text('Done')} propsOnPerform={this.onPerformDone}></eb-link>
+      );
+    }
+    return <f7-nav-right>{domActions}</f7-nav-right>;
   },
 };

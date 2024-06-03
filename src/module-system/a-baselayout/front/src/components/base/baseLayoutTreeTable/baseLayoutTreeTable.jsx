@@ -28,17 +28,13 @@ export default {
   methods: {
     async init() {
       // subnavbar
-      if (this.layoutConfig.subnavbar && this.layoutConfig.subnavbar.policyDefault) {
-        this.layoutManager.subnavbar_policyDefault();
-      }
-      // eslint-disable-next-line
-      this.layoutManager.bottombar.enable = !!this.layoutConfig.blocks.bottombar;
-      // provider switch
-      const providerOptions = this.layoutConfig.providerOptions || {
+      await this.layoutManager.subnavbar_policyInit();
+      // bottombar
+      await this.layoutManager.bottombar_policyInit();
+      // provider
+      const res = await this.layoutManager.data_providerInit({
         providerName: 'tree',
-        autoInit: true,
-      };
-      const res = await this.layoutManager.data_providerSwitch(providerOptions);
+      });
       this.treeviewData = res.treeviewData;
       // instance
       await this.layoutManager.layout_setInstance(this);
@@ -50,7 +46,7 @@ export default {
     },
     _renderConfigProvider() {
       if (!this.antdv.locales) return null;
-      const blockName = this.layoutConfig.blockItems || 'items';
+      const blockName = this.layoutConfig.options?.blockItems || 'items';
       return (
         <a-config-provider locale={this.antdv_getLocale()} renderEmpty={this._renderEmpty}>
           {this.layoutManager.layout_renderBlock({ blockName })}
@@ -59,6 +55,6 @@ export default {
     },
   },
   render() {
-    return <div class="eb-antdv">{this._renderConfigProvider()}</div>;
+    return <div class="eb-atom-list-layout eb-atom-list-layout-treetable eb-antdv">{this._renderConfigProvider()}</div>;
   },
 };

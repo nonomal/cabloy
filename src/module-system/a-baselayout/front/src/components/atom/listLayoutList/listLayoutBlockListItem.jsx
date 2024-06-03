@@ -37,13 +37,30 @@ export default {
       const index = this.layoutManager.bulk.selectedAtoms.findIndex(_item => _item.atomId === item.atomId);
       return index > -1;
     },
-    _renderListItem(item) {
-      // media
-      const domMedia = this.layoutManager.bulk.selecting ? null : (
+    _renderMedia(info) {
+      if (this.layoutManager.bulk.selecting) return null;
+      const media = this.blockConfig.options?.mapper?.media;
+      const domMedia = this.layoutManager.item_renderMedia2(info, null, media);
+      if (!domMedia) return null;
+      return (
         <div slot="media" class="avatar24-wrapper">
-          {this.layoutManager.item_renderMedia(item)}
+          {domMedia}
         </div>
       );
+    },
+    _renderAtomName(info) {
+      const atomNameFieldName = this.blockConfig.options?.mapper?.atomName;
+      const domTitle = (
+        <div slot="title" class="title">
+          <div>{this.layoutManager.item_getAtomName(info.item, atomNameFieldName)}</div>
+        </div>
+      );
+      return domTitle;
+    },
+    _renderListItem(info) {
+      const item = info.item;
+      // media
+      const domMedia = this._renderMedia(info);
       // domHeader
       const domHeader = (
         <div slot="root-start" class="header">
@@ -52,16 +69,12 @@ export default {
           </div>
           <div class="date">
             {this.layoutManager.item_renderStats(item)}
-            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt)}</span>
+            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt || item.updatedAt)}</span>
           </div>
         </div>
       );
       // domTitle
-      const domTitle = (
-        <div slot="title" class="title">
-          <div>{this.layoutManager.item_getAtomName(item)}</div>
-        </div>
-      );
+      const domTitle = this._renderAtomName(info);
       // domSummary
       let domSummary;
       if (this.blockConfig.summary !== false) {
@@ -113,7 +126,6 @@ export default {
     },
   },
   render() {
-    const { item } = this.info;
-    return this._renderListItem(item);
+    return this._renderListItem(this.info);
   },
 };

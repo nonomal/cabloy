@@ -16,11 +16,13 @@ export default {
   methods: {
     async init() {
       // config
-      const layoutConfig = await this.$store.dispatch('a/base/getLayoutConfig', 'a-codemirror');
+      const useStoreLayoutConfig = await this.$store.use('a/basestore/layoutConfig');
+      const layoutConfig = await useStoreLayoutConfig.getLayoutConfig({ module: 'a-codemirror' });
       this.modes = (layoutConfig.modes || ModesDefault).split(',');
     },
-    _saveConfig() {
-      this.$store.commit('a/base/setLayoutConfigKey', {
+    async _saveConfig() {
+      const useStoreLayoutConfig = await this.$store.use('a/basestore/layoutConfig');
+      useStoreLayoutConfig.setLayoutConfigKey({
         module: 'a-codemirror',
         key: 'modes',
         value: this.modes.join(','),
@@ -36,15 +38,15 @@ export default {
       }
       this.modes.unshift(mode);
       // save config
-      this._saveConfig();
+      await this._saveConfig();
     },
-    onPerformMode(mode) {
+    async onPerformMode(mode) {
       // switch order
       const index = this.modes.indexOf(mode);
       const items = this.modes.splice(index, 1);
       this.modes.unshift(items[0]);
       // save config
-      this._saveConfig();
+      await this._saveConfig();
       // ok
       const modeInfo = window.CodeMirror.__findMode(mode);
       this.contextCallback(200, { mode, modeInfo });

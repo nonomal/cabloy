@@ -18,11 +18,23 @@ module.exports = {
   get module() {
     if (this[MODULE] === undefined) {
       const url = this.req.mockUrl || this.req.url || '';
-      let info = mparse.parseInfo(mparse.parseName(url));
+      let info;
+      if (url.indexOf('/api/static/public/') === 0) {
+        info = null;
+      } else {
+        info = mparse.parseInfo(mparse.parseName(url));
+      }
       if (!info) {
         info = mparse.parseInfo('a-base');
       }
-      this[MODULE] = info ? this.app.meta.modules[info.relativeName] : null;
+      if (info) {
+        const module = this.app.meta.modules[info.relativeName];
+        // should not throw error, because the url maybe not valid
+        // if (!module) throw new Error(`module not found: ${info.relativeName}`);
+        this[MODULE] = module || null;
+      } else {
+        this[MODULE] = null;
+      }
     }
     return this[MODULE];
   },
@@ -95,7 +107,7 @@ module.exports = {
     return this.bean.cache;
   },
   tail(cb) {
-    if (this.ctxCaller) {
+    if (!this.dbMeta.master) {
       this.ctxCaller.tail(cb);
     } else {
       this.tailCallbacks.push(cb);
@@ -105,11 +117,12 @@ module.exports = {
     while (true) {
       const cb = this.tailCallbacks.shift();
       if (!cb) break;
-      try {
-        await cb();
-      } catch (err) {
-        this.app.logger.error(err);
-      }
+      await cb();
+      // try {
+      //   await cb();
+      // } catch (err) {
+      //   this.app.logger.error(err);
+      // }
     }
   },
   get tailCallbacks() {
@@ -163,9 +176,9 @@ module.exports = {
    * @param  {json} options.body   body(optional)
    * @return {promise}                response.body.data or throw error
    */
-  performAction({ innerAccess, subdomain, method, url, query, params, headers, body }) {
+  performAction({ innerAccess, method, url, query, params, headers, body }) {
     this.app.meta.util.deprecated('ctx.performAction', 'ctx.meta.util.performAction');
-    return this.meta.util.performAction({ innerAccess, subdomain, method, url, query, params, headers, body });
+    return this.meta.util.performAction({ innerAccess, method, url, query, params, headers, body });
   },
 
   getVal(name) {

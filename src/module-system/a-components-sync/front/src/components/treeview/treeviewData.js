@@ -32,6 +32,10 @@ export default {
         await this._loadChildren(this.treeviewRoot);
       }
     },
+    replaceNode(node, nodeNew) {
+      node.data = nodeNew.data;
+      this.adapter.onNodeReplace(node, nodeNew);
+    },
     async reloadNode(node, nodeNew) {
       // support root
       // if (node.root) return;
@@ -79,7 +83,9 @@ export default {
       nodeStart = nodeStart || this.treeviewRoot;
       if (!nodeStart) return;
       // treeDown
-      await this._treeDownAsync(nodeStart, loadChildren, cb);
+      await this.renderFreezeBegin(async () => {
+        await this._treeDownAsync(nodeStart, loadChildren, cb);
+      });
     },
     treeParent(nodeStart, cb) {
       if (!nodeStart) return;
@@ -88,10 +94,16 @@ export default {
     find(nodeStart, cb) {
       let node = null;
       this.treeDown(nodeStart, item => {
-        if (cb(item)) {
+        const res = cb(item);
+        if (res === true) {
           node = item;
           return false; // break
         }
+        if (res === false) {
+          return null; // step into
+        }
+        // others
+        return true; // continue/not step into
       });
       return node;
     },
@@ -100,10 +112,15 @@ export default {
       let node = null;
       await this.treeDownAsync(nodeStart, loadChildren, async item => {
         const res = await cb(item);
-        if (res) {
+        if (res === true) {
           node = item;
           return false; // break
         }
+        if (res === false) {
+          return null; // step into
+        }
+        // others
+        return true; // continue/not step into
       });
       return node;
     },
@@ -261,28 +278,27 @@ export default {
         // current first
         let res = cb(node, nodeParent);
         if (res === false) return false; // return immediately
-        if (res !== true) {
-          // children
-          res = this._treeDown(node, cb);
-          if (res === false) return false; // return immediately
-        }
+        if (res === true) continue;
+        // children
+        res = this._treeDown(node, cb);
+        if (res === false) return false; // return immediately
       }
     },
+    // res: false(break) / true(continue) / undefined/null(step into)
     async _treeDownAsync(nodeParent, loadChildren, cb) {
       // children
       for (const node of nodeParent.children) {
         // current first
         let res = await cb(node, nodeParent);
         if (res === false) return false; // return immediately
-        if (res !== true) {
-          // loadChildren
-          if (loadChildren) {
-            await this._loadChildren(node);
-          }
-          // children
-          res = await this._treeDownAsync(node, loadChildren, cb);
-          if (res === false) return false; // return immediately
+        if (res === true) continue;
+        // loadChildren
+        if (loadChildren) {
+          await this._loadChildren(node);
         }
+        // children
+        res = await this._treeDownAsync(node, loadChildren, cb);
+        if (res === false) return false; // return immediately
       }
     },
     _initRootNode(root) {
@@ -304,13 +320,15 @@ export default {
       // ready
       return _root;
     },
-    childrenLoaded(node, children) {
-      this.$set(node.attrs, 'loaded', true);
+    async _childrenLoaded(node, children) {
       if (!node.children) node.children = [];
+      // loop
       const nodeChildren = node.children;
       for (const item of children) {
         // attrs id
-        item.attrs.id = this._calcNodeAttrId(node, item);
+        if (!item.attrs.id) {
+          item.attrs.id = this._calcNodeAttrId(node, item);
+        }
         // children
         if (!item.children) item.children = [];
         // checked
@@ -324,14 +342,29 @@ export default {
       for (const item of nodeChildren) {
         item.parent = node;
       }
+      // maxLevelAutoOpened
+      const maxLevelAutoOpened = this.treeviewRoot.attrs.maxLevelAutoOpened || 0;
+      const levelCurrent = node.__level__ || 0;
+      const level = levelCurrent + 1;
+      for (const item of nodeChildren) {
+        item.__level__ = level;
+        if (item.attrs.loadChildren && (level <= maxLevelAutoOpened || maxLevelAutoOpened === -1)) {
+          await this._preloadChildren(item);
+        }
+      }
+      // loaded: should be after _preloadChildren
+      this.$set(node.attrs, 'loaded', true);
+      // ok
       return nodeChildren;
     },
     async _loadChildren(node) {
       if (!this._needLoadChildren(node)) return node.children;
       try {
         this.$set(node.attrs, 'loading', true);
+        // load
         const data = await this.adapter.onLoadChildren(node);
-        return this.childrenLoaded(node, data);
+        // loaded
+        return await this._childrenLoaded(node, data);
       } finally {
         this.$set(node.attrs, 'loading', false);
       }

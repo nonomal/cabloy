@@ -1,30 +1,30 @@
-import listLayoutManager from '../common/listLayoutManager/index.jsx';
-
+// export
 export default {
-  mixins: [listLayoutManager],
   props: {
     context: {
       type: Object,
     },
   },
   data() {
-    const { parcel, property, validate } = this.context;
+    const { parcel } = this.context;
+    const atomIdMain = parcel.data.atomId;
     return {
-      container: {
-        title: this.context.getTitle(true),
-        mode: validate.host && validate.host.mode,
-        flowTaskId: (validate.host && validate.host.flowTaskId) || 0,
-        atomId: parcel.data.atomId,
-        atom: parcel.data,
-        detailClass: property.ebParams.detailClass,
-        options: {},
-        layout: null,
-      },
+      atomIdMain,
     };
   },
-  created() {},
   methods: {},
   render() {
-    return this.layout_renderLayout();
+    const { parcel } = this.context;
+    const atomIdMain = parcel.data.atomId;
+    const options = {
+      props: {
+        context: this.context,
+      },
+    };
+    if (atomIdMain === 0) {
+      // only title
+      return <eb-component module="a-detail" name="renderDetailsTitle" options={options}></eb-component>;
+    }
+    return <eb-component module="a-detail" name="renderDetailsReal" options={options}></eb-component>;
   },
 };

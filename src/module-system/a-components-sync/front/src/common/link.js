@@ -34,8 +34,8 @@ export default {
   methods: {
     getHref(href) {
       if (!href || href[0] === '#') return href;
-      if (!this.$page) return href;
-      const module = this.$page.$module;
+      if (!this.$pageContainer) return href;
+      const module = this.$pageContainer.$module;
       if (!module) return href;
       return this.$meta.util.combinePagePath(module.info, href);
     },

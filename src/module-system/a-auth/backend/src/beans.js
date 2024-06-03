@@ -8,51 +8,39 @@ const startupCacheAuthProviders = require('./bean/startup.cacheAuthProviders.js'
 const beanAuthProvider = require('./bean/bean.authProvider.js');
 const beanAuthProviderCache = require('./bean/bean.authProviderCache.js');
 
-module.exports = app => {
-  const beans = {
-    // version
-    'version.manager': {
-      mode: 'app',
-      bean: versionManager,
-    },
-    // local
-    'local.authProviderBase': {
-      mode: 'ctx',
-      bean: localAuthProviderBase,
-    },
-    'local.passport': {
-      mode: 'ctx',
-      bean: localPassport,
-    },
-    // broadcast
-    'broadcast.authProviderChanged': {
-      mode: 'app',
-      bean: broadcastAuthProviderChanged,
-    },
-    // startup
-    'startup.registerPassport': {
-      mode: 'app',
-      bean: startupRegisterPassport,
-    },
-    'startup.registerRouters': {
-      mode: 'app',
-      bean: startupRegisterRouters,
-    },
-    'startup.cacheAuthProviders': {
-      mode: 'app',
-      bean: startupCacheAuthProviders,
-    },
-    // global
-    authProvider: {
-      mode: 'ctx',
-      bean: beanAuthProvider,
-      global: true,
-    },
-    authProviderCache: {
-      mode: 'ctx',
-      bean: beanAuthProviderCache,
-      global: true,
-    },
-  };
-  return beans;
+module.exports = {
+  // version
+  'version.manager': {
+    bean: versionManager,
+  },
+  // local
+  'local.authProviderBase': {
+    bean: localAuthProviderBase,
+  },
+  'local.passport': {
+    bean: localPassport,
+  },
+  // broadcast
+  'broadcast.authProviderChanged': {
+    bean: broadcastAuthProviderChanged,
+  },
+  // startup
+  'startup.registerPassport': {
+    bean: startupRegisterPassport,
+  },
+  'startup.registerRouters': {
+    bean: startupRegisterRouters,
+  },
+  'startup.cacheAuthProviders': {
+    bean: startupCacheAuthProviders,
+  },
+  // global
+  authProvider: {
+    bean: beanAuthProvider,
+    global: true,
+  },
+  authProviderCache: {
+    bean: beanAuthProviderCache,
+    global: true,
+  },
 };

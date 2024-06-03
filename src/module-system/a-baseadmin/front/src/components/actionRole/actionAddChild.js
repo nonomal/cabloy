@@ -5,6 +5,10 @@ export default {
       try {
         // add
         const key = { atomId: item.atomId, itemId: item.itemId };
+        const atomClass = {
+          module: item.module,
+          atomClassName: item.atomClassName,
+        };
         const data = await ctx.$api.post('/a/baseadmin/role/addChild', { key });
         const keyChild = data.key;
         const atomChild = data.atom;
@@ -14,6 +18,7 @@ export default {
         // event
         ctx.$meta.eventHub.$emit('atom:action', {
           key: keyChild,
+          atomClass,
           action: { name: 'addChildNode' },
           node: { parentId: atomChild.roleIdParent },
         });
@@ -23,13 +28,14 @@ export default {
           atomChild
         );
         let navigateOptions = action.navigateOptions;
-        if (ctx.$pageRoute.path === '/a/basefront/atom/item') {
+        if (ctx.index?.layoutManagerScene === 'item') {
           navigateOptions = { target: '_self' };
         }
         ctx.$view.navigate(url, navigateOptions);
       } catch (err) {
         if (err.code === 422) {
-          throw new Error(err.message[0].message);
+          const errMessage = JSON.parse(err.message);
+          throw new Error(errMessage[0].message);
         }
         throw err;
       }

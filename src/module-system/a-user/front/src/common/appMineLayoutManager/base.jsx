@@ -28,7 +28,8 @@ export default {
       return this.$store.state.auth.loggedIn;
     },
     base_appCurrent() {
-      return this.$store.getters['a/app/current'];
+      const useStoreApp = this.$store.useSync('a/app/app');
+      return useStoreApp.current;
     },
   },
   watch: {
@@ -58,7 +59,8 @@ export default {
       await this.layout_prepareConfigLayout(this.layout.current);
     },
     async base_app_prepareAppCurrent({ appKey, force }) {
-      const appInfo = await this.$store.dispatch('a/app/getAppMineInfo', { appKey, force });
+      const useStoreApp = await this.$store.use('a/app/app');
+      const appInfo = await useStoreApp.getAppMineInfo({ appKey, force });
       if (!appInfo) return false;
       if (this.base_app_isCurrentSameFull(this.base.appInfoCurrent, appInfo)) return false;
       // current
@@ -66,9 +68,8 @@ export default {
       // configAppMine
       if (typeof appInfo.appMineLayout === 'string') {
         // mine.layout=layoutKey
-        const layoutItem = await this.$store.dispatch('a/baselayout/getLayoutItem', {
-          layoutKey: appInfo.appMineLayout,
-        });
+        const useStoreLayout = await this.$store.use('a/baselayout/layout');
+        const layoutItem = await useStoreLayout.getLayoutItem({ layoutKey: appInfo.appMineLayout });
         this.base.configAppMine = layoutItem.content;
       } else {
         // mine.layout=true
@@ -97,8 +98,9 @@ export default {
     async base_checkAppMineDefault({ appInfo }) {
       if (this.base.appMineDefaultChecked) return;
       // app default
+      const useStoreApp = await this.$store.use('a/app/app');
       if (!this.base_isAppDefault(appInfo.appKey) && !appInfo.appItem.appIsolate) {
-        const appDefault = await this.$store.dispatch('a/app/getAppMineInfo', {
+        const appDefault = await useStoreApp.getAppMineInfo({
           appKey: this.base.appKeyDefault,
           force: false,
         });
@@ -119,7 +121,12 @@ export default {
       return a.appKey === b.appKey && a.appMineLayout === b.appMineLayout;
     },
     async base_onPerformResource(event, resource) {
-      const options = { navigateOptions: { target: '_self' } };
+      const navigateOptions = { target: '_self' };
+      if (resource.resourceConfig) {
+        const resourceConfig = JSON.parse(resource.resourceConfig);
+        this.$meta.util.extend(navigateOptions, resourceConfig.navigateOptions);
+      }
+      const options = { navigateOptions };
       return await this.base_performActionResource(event, resource, options);
     },
   },

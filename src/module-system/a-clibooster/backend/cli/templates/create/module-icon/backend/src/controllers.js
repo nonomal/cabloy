@@ -1,4 +1,2 @@
-module.exports = app => {
-  const controllers = {};
-  return controllers;
-};
+const controllers = {};
+module.exports = controllers;

@@ -1,12 +1,12 @@
 {
   "name": "egg-born-module-a-file",
-  "version": "4.3.14",
+  "version": "5.0.0",
   "title": "File",
   "eggBornModule": {
     "fileVersion": 2,
     "dependencies": {
-      "a-instance": "4.0.0",
-      "a-base": "4.0.0"
+      "a-instance": "5.0.0",
+      "a-base": "5.0.0"
     }
   },
   "description": "",
@@ -22,8 +22,9 @@
     "bluebird": "^3.7.2",
     "cropperjs": "^1.5.6",
     "fs-extra": "^10.1.0",
-    "gm": "^1.23.1",
+    "jimp": "^0.16.2",
     "pump": "^3.0.0",
-    "stream-wormhole": "^1.1.0"
+    "stream-wormhole": "^1.1.0",
+    "mime": "^3.0.0"
   }
 }

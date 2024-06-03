@@ -1,59 +1,51 @@
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  // static
-  const staticResources = require('./config/static/resources.js')(app);
-  // meta
-  const meta = {
-    base: {
-      atoms: {
-        layout: {
-          info: {
-            bean: 'layout',
-            title: 'Layout',
-            tableName: 'aLayout',
-            tableNameModes: {
-              full: 'aLayoutViewFull',
-            },
-            inner: true,
-            resource: true,
-            dict: {
-              fields: {
-                layoutTypeCode: {
-                  dictKey: 'a-dictbooster:dictLayoutType',
-                },
+const schemas = require('./meta/validation/schemas.js');
+// static
+const staticResources = require('./meta/static/resources.js');
+// meta
+const meta = {
+  base: {
+    atoms: {
+      layout: {
+        info: {
+          bean: 'layout',
+          title: 'Layout',
+          tableName: 'aLayout',
+          tableNameModes: {
+            full: 'aLayoutViewFull',
+          },
+          inner: true,
+          resource: true,
+          comment: false,
+          attachment: false,
+          fields: {
+            dicts: {
+              layoutTypeCode: {
+                dictKey: 'a-dictbooster:dictLayoutType',
               },
             },
           },
-          actions: {
-            write: {
-              enableOnStatic: true,
-            },
-          },
-          validator: 'layout',
-          search: {
-            validator: 'layoutSearch',
+        },
+        actions: {
+          write: {
+            enableOnStatic: null,
           },
         },
-      },
-      statics: {
-        'a-base.resource': {
-          items: staticResources,
+        validator: 'layout',
+        search: {
+          validator: 'layoutSearch',
         },
       },
     },
-    validation: {
-      validators: {
-        layout: {
-          schemas: 'layout',
-        },
-        layoutSearch: {
-          schemas: 'layoutSearch',
-        },
+    statics: {
+      'a-base.resource': {
+        items: staticResources,
       },
-      keywords: {},
-      schemas,
     },
-  };
-  return meta;
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
 };
+module.exports = meta;

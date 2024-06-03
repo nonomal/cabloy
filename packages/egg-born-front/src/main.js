@@ -4,8 +4,14 @@ require('regenerator-runtime/runtime');
 // vue
 const Vue = require('./base/vue.js').default;
 
+// vue style loader
+window.__vueStyleLoader_add = require('@zhennann/vue-style-loader/lib/addStylesClient.js').default;
+
 // json
 require('./base/json.js');
+
+// array.prototype.group
+require('./base/arrayGroup.js');
 
 // meta
 const meta = (Vue.prototype.$meta = {});
@@ -17,7 +23,7 @@ meta.modules = {};
 // modulesWaiting
 meta.modulesWaiting = {};
 // modulesMonkey
-meta.modulesMonkey = {};
+meta.modulesMonkey = [];
 // module
 meta.module = require('./base/module.js').default(Vue);
 // util
@@ -33,7 +39,10 @@ meta.module.install(instanceMain, { relativeName: 'main' }, module => {
   // vue parameters
   require('./inject/framework7.js').default(Vue, module.options, parameters => {
     meta.parameters = parameters;
-    // new vue
-    new Vue(parameters);
+    const bodyCryptoLoader = require('./base/bodyCrypto.js').default(Vue);
+    bodyCryptoLoader.createBodyCrypto().then(() => {
+      // new vue
+      new Vue(parameters);
+    });
   });
 });

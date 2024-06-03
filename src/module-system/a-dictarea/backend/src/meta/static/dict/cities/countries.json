@@ -1,0 +1,16 @@
+[
+  {
+    "code": "1",
+    "title": "USA",
+    "options": {
+      "dictKey": "a-dictarea:citiesUSA"
+    }
+  },
+  {
+    "code": "86",
+    "title": "China",
+    "options": {
+      "dictKey": "a-dictarea:citiesChina"
+    }
+  }
+]

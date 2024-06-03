@@ -1,71 +1,63 @@
-module.exports = app => {
-  const schemas = require('./config/validation/schemas.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  const socketioWorkflow = require('./config/socketio/workflow.js')(app);
-  const flowBehaviors = require('./config/flow/behaviors.js')(app);
-  const meta = {
-    base: {
-      atoms: {
-        flowDef: {
-          info: {
-            bean: 'flowDef',
-            title: 'FlowDefinition',
-            tableName: 'aFlowDef',
-            tableNameModes: {
-              full: 'aFlowDefViewFull',
-            },
-            inner: true,
-            category: true,
-            tag: true,
+const schemas = require('./meta/validation/schemas.js');
+const staticResources = require('./meta/static/resources.js');
+const socketioWorkflow = require('./meta/socketio/workflow.js');
+const flowBehaviors = require('./meta/flow/behaviors.js');
+const meta = {
+  base: {
+    atoms: {
+      flowDef: {
+        info: {
+          bean: 'flowDef',
+          title: 'FlowDefinition',
+          tableName: 'aFlowDef',
+          tableNameModes: {
+            full: 'aFlowDefViewFull',
           },
-          actions: {
-            write: {
-              enableOnStatic: true,
-            },
-          },
-          validator: 'flowDef',
-          search: {
-            validator: 'flowDefSearch',
+          inner: true,
+          resource: true,
+          category: true,
+          tag: true,
+          comment: false,
+          attachment: false,
+          history: true,
+        },
+        actions: {
+          write: {
+            enableOnStatic: null,
           },
         },
-      },
-      statics: {
-        'a-base.resource': {
-          items: staticResources,
+        validator: 'flowDef',
+        search: {
+          validator: 'flowDefSearch',
         },
       },
     },
-    validation: {
-      validators: {
-        flowDef: {
-          schemas: 'flowDef',
-        },
-        flowDefSearch: {
-          schemas: 'flowDefSearch',
-        },
-      },
-      keywords: {},
-      schemas: {
-        flowDef: schemas.flowDef,
-        flowDefSearch: schemas.flowDefSearch,
+    statics: {
+      'a-base.resource': {
+        items: staticResources,
       },
     },
-    stats: {
-      providers: {
-        flowInitiateds: {
-          user: true,
-          bean: 'flowInitiateds',
-        },
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
+  stats: {
+    providers: {
+      flowInitiateds: {
+        user: true,
+        bean: 'flowInitiateds',
       },
     },
-    socketio: {
-      messages: {
-        workflow: socketioWorkflow,
-      },
+  },
+  socketio: {
+    messages: {
+      workflow: socketioWorkflow,
     },
-    flow: {
-      behaviors: flowBehaviors,
-    },
-  };
-  return meta;
+  },
+  flow: {
+    behaviors: flowBehaviors,
+  },
 };
+module.exports = meta;

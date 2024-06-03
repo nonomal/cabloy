@@ -1,12 +1,13 @@
 import TabViews from './tabViews.vue';
-import Group from './group.vue';
+import Group from './group.js';
 import MixinApp from '../common/layout/app.js';
+import MixinTheme from '../common/layout/theme.js';
 
 export default {
   meta: {
     global: false,
   },
-  mixins: [MixinApp],
+  mixins: [MixinApp, MixinTheme],
   components: {
     ebTabViews: TabViews,
     ebGroup: Group,
@@ -124,19 +125,25 @@ export default {
         // do nothing
         return;
       }
-      if (!url) return;
-      // check if http
-      if (url.indexOf('https://') === 0 || url.indexOf('http://') === 0) {
-        location.assign(url);
-        return;
-      }
-      // check login
-      if (!this._checkUrlLogin(url)) return;
       // options
       options = options || {};
       const ctx = options.ctx;
       const target = options.target;
       const scene = options.scene;
+
+      if (!url) return;
+      // check if http
+      if (url.indexOf('https://') === 0 || url.indexOf('http://') === 0) {
+        if (target) {
+          window.open(url, target);
+        } else {
+          location.assign(url);
+        }
+        return;
+      }
+      // check login
+      if (!this._checkUrlLogin(url)) return;
+      // options
       if (target === '_self') {
         ctx.$view.f7View.router.navigate(url, options);
       } else {
@@ -154,7 +161,10 @@ export default {
           // in new view
           this.$refs.group.createView({ ctx, url }).then(res => {
             if (res) {
-              if (res.options) options = this.$utils.extend({}, options, res.options);
+              if (res.options) {
+                // options = this.$utils.extend({}, options, res.options);
+                options = Object.assign({}, options, res.options);
+              }
               res.view.f7View.router.navigate(url, options);
             }
           });
@@ -208,14 +218,15 @@ export default {
       }
       return Promise.all(promises);
     },
-    __saveLayoutConfigNow() {
+    async __saveLayoutConfigNow() {
       // override
       const value = this.$meta.util.extend({}, this.layoutConfig);
       // remove dynamic resources
       this.__removeDynamicResources(value);
       // save
       if (this.layoutAtomStaticKey) {
-        this.$store.commit('a/base/setLayoutConfigKey', {
+        const useStoreLayoutConfig = await this.$store.use('a/basestore/layoutConfig');
+        useStoreLayoutConfig.setLayoutConfigKey({
           module: 'a-layoutmobile',
           key: `layout:${this.layoutAtomStaticKey}`,
           value,
@@ -242,41 +253,52 @@ export default {
       }
     },
     async __initLayoutKey() {
-      let appPresetConfig = await this.$store.dispatch('a/app/getPresetConfigCurrent');
+      const useStoreApp = await this.$store.use('a/app/app');
+      let appPresetConfig = await useStoreApp.getPresetConfigCurrent();
       if (!appPresetConfig.layout) {
-        appPresetConfig = await this.$store.dispatch('a/app/getPresetConfigDefault');
+        appPresetConfig = await useStoreApp.getPresetConfigDefault();
       }
       this.layoutAtomStaticKey = appPresetConfig.layout;
       return this.layoutAtomStaticKey;
     },
+    __getLayoutDefault() {
+      // userStatus
+      const userOp = this.user && this.user.op;
+      const userStatus = !userOp || userOp.anonymous ? 'anonymous' : 'authenticated';
+      return this.$config.layout.default[userStatus];
+    },
     async __init() {
       const layoutKey = await this.__initLayoutKey();
+      // theme
+      await this.theme_init();
       // buttonsAll
       await this.__getResourcesAll();
       // layoutDefault
-      this.layoutDefault = this.$config.layout.default;
+      this.layoutDefault = this.__getLayoutDefault();
       // layoutScene
-      const _layoutItem = await this.$store.dispatch('a/baselayout/getLayoutItem', { layoutKey });
+      const useStoreLayout = await this.$store.use('a/baselayout/layout');
+      const _layoutItem = await useStoreLayout.getLayoutItem({ layoutKey });
       this.layoutScene = _layoutItem.content;
       // layoutConfig
-      const res = await this.$store.dispatch('a/base/getLayoutConfig', 'a-layoutmobile');
+      const useStoreLayoutConfig = await this.$store.use('a/basestore/layoutConfig');
+      const res = await useStoreLayoutConfig.getLayoutConfig({ module: 'a-layoutmobile' });
       // init layoutConfig
-      this.__initLayoutConfig(res[`layout:${layoutKey}`]);
+      this.__initLayoutConfig(res[`layout:${layoutKey}`], _layoutItem.atomRevision);
       // init toolbar
       this.__initToolbar();
       // inited
       this.toolbarInited = true;
     },
-    __initLayoutConfig(layoutConfig) {
-      if (layoutConfig) {
+    __initLayoutConfig(layoutConfig, atomRevision) {
+      if (layoutConfig && layoutConfig.atomRevision === atomRevision) {
         this.layoutConfig = this.$meta.util.extend({}, this.layoutDefault, this.layoutScene, layoutConfig);
       } else {
-        this.layoutConfig = this.$meta.util.extend({}, this.layoutDefault, this.layoutScene);
+        this.layoutConfig = this.$meta.util.extend({}, this.layoutDefault, this.layoutScene, { atomRevision });
       }
     },
-    reset() {
+    async reset() {
       this.layoutConfig = this.$meta.util.extend({}, this.layoutDefault, this.layoutScene);
-      this.__saveLayoutConfigNow();
+      await this.__saveLayoutConfigNow();
       this.$meta.vueApp.reload();
     },
     __initToolbar() {

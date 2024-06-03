@@ -11,11 +11,6 @@ export default [
   { path: 'role/includes', component: loadjsx('role/includes') },
   { path: 'user/select', component: load('user/select') },
   { path: 'user/userRoles', component: loadjsx('user/userRoles') },
-  { path: 'user/atomRights', component: loadjsx('user/atomRights') },
-  { path: 'user/resourceRights', component: loadjsx('user/resourceRights') },
-  { path: 'atomRight/edit', component: loadjsx('atomRight/edit') },
-  { path: 'atomRight/add', component: load('atomRight/add') },
-  { path: 'resourceRight/edit', component: loadjsx('resourceRight/edit') },
   { path: 'resourceRight/add', component: load('resourceRight/add') },
   { path: 'auth/list', component: loadjsx('auth/list') },
   { path: 'auth/config', component: loadjsx('auth/config') },
@@ -24,4 +19,9 @@ export default [
   { path: 'category/edit', component: load('category/edit') },
   { path: 'tag/management', component: loadjsx('tag/management') },
   { path: 'tag/list', component: load('tag/list') },
+  // bak
+  // { path: 'atomRight/edit', component: loadjsx('atomRight/edit') },
+  // { path: 'atomRight/add', component: loadjsx('atomRight/add') },
+  // { path: 'user/atomRights', component: loadjsx('user/atomRights') },
+  // { path: 'user/resourceRights', component: loadjsx('user/resourceRights') },
 ];

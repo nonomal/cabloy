@@ -2,8 +2,8 @@ module.exports = {
   All: '所有',
   Article: '文章',
   Catalog: '目录',
-  Category: '目录',
-  Categories: '目录',
+  Category: '分类',
+  Categories: '分类',
   Comment: '评论',
   Comments: '评论',
   Language: '语言',
@@ -47,4 +47,5 @@ module.exports = {
   'Build Site First': '请先构建站点',
   'Cannot delete if has children': '有子元素时不允许删除',
   'Cannot delete if has articles': '有文章时不允许删除',
+  'CMS Article Publish': 'CMS文章发布',
 };

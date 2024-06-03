@@ -9,56 +9,43 @@ const atomArticle = require('./bean/atom.article.js');
 const beanCms = require('./bean/bean.cms.js');
 const ioMessageHotloadFile = require('./bean/io.message.hotloadFile.js');
 
-module.exports = app => {
-  const beans = {
-    // version
-    'version.manager': {
-      mode: 'app',
-      bean: versionManager,
-    },
-    // local
-    'local.build': {
-      mode: 'app',
-      bean: localBuild,
-    },
-    'local.render': {
-      mode: 'ctx',
-      bean: localRender,
-    },
-    'local.site': {
-      mode: 'ctx',
-      bean: localSite,
-    },
-    // queue
-    'queue.render': {
-      mode: 'app',
-      bean: queueRender,
-    },
-    // startup
-    'startup.registerAllWatchers': {
-      mode: 'app',
-      bean: startupRegisterAllWatchers,
-    },
-    'startup.registerDevelopment': {
-      mode: 'app',
-      bean: startupRegisterDevelopment,
-    },
-    // atom
-    'atom.article': {
-      mode: 'app',
-      bean: atomArticle,
-    },
-    // global
-    cms: {
-      mode: 'ctx',
-      bean: beanCms,
-      global: true,
-    },
-    // io
-    'io.message.hotloadFile': {
-      mode: 'ctx',
-      bean: ioMessageHotloadFile,
-    },
-  };
-  return beans;
+module.exports = {
+  // version
+  'version.manager': {
+    bean: versionManager,
+  },
+  // local
+  'local.build': {
+    bean: localBuild,
+  },
+  'local.render': {
+    bean: localRender,
+  },
+  'local.site': {
+    bean: localSite,
+  },
+  // queue
+  'queue.render': {
+    bean: queueRender,
+  },
+  // startup
+  'startup.registerAllWatchers': {
+    bean: startupRegisterAllWatchers,
+  },
+  'startup.registerDevelopment': {
+    bean: startupRegisterDevelopment,
+  },
+  // atom
+  'atom.article': {
+    bean: atomArticle,
+  },
+  // global
+  cms: {
+    bean: beanCms,
+    global: true,
+  },
+  // io
+  'io.message.hotloadFile': {
+    bean: ioMessageHotloadFile,
+  },
 };

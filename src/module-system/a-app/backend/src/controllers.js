@@ -1,4 +1,2 @@
-module.exports = app => {
-  const controllers = {};
-  return controllers;
-};
+const resource = require('./controller/resource.js');
+module.exports = { resource };

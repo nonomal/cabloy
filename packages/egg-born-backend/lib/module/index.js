@@ -5,6 +5,7 @@ const loadControllers = require('./controller.js');
 const loadServices = require('./service.js');
 const loadModels = require('./model.js');
 const loadConfig = require('./config.js');
+const loadModuleMeta = require('./moduleMeta.js');
 const loadLocales = require('./locales.js');
 const loadErrors = require('./errors.js');
 const loadConstants = require('./constant.js');
@@ -26,6 +27,9 @@ module.exports = function (loader) {
   // messenger
   loadMessenger(loader);
 
+  // bean
+  loadBeans.loadBeanContainer(loader);
+
   // modules
   const modulesTools = ModulesToolsFn(loader);
   // load modules
@@ -35,10 +39,11 @@ module.exports = function (loader) {
 
   if (meta.inApp) {
     loadConfig(loader, modules);
+    loadModuleMeta(loader, modules);
     loadLocales(loader, modules);
     loadErrors(loader, modules);
     loadConstants(loader, modules);
-    loadBeans(loader, modules);
+    loadBeans.loadBeans(loader, modules);
     loadRoutes(loader, modules);
     loadControllers(loader, modules);
     loadServices(loader, modules);

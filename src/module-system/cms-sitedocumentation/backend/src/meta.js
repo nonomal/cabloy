@@ -1,66 +1,68 @@
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  // static
-  const staticApps = require('./config/static/apps.js')(app);
-  const staticFlowDefs = require('./config/static/flowDefs.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  // meta
-  const meta = {
-    base: {
-      atoms: {
-        document: {
-          info: {
-            bean: 'document',
-            title: 'Document',
-            tableName: '',
-            language: true,
-            category: true,
-            tag: true,
-            cms: true,
+const schemas = require('./meta/validation/schemas.js');
+// static
+const staticApps = require('./meta/static/apps.js');
+const staticFlowDefs = require('./meta/static/flowDefs.js');
+const staticResources = require('./meta/static/resources.js');
+// meta
+const meta = {
+  base: {
+    atoms: {
+      document: {
+        info: {
+          bean: 'document',
+          title: 'Document',
+          tableName: '',
+          language: true,
+          category: true,
+          tag: true,
+          cms: true,
+          flow: {
+            stage: 'draft',
           },
-          actions: {
-            preview: {
-              code: 101,
-              title: 'Preview',
-              actionModule: 'a-cms',
-              actionComponent: 'action',
-              icon: { f7: '::preview' },
-              enableOnStatic: true,
-              enableOnOpened: true,
-              stage: 'draft,formal',
+          fields: {
+            dicts: {
+              atomState: {
+                draft: {
+                  dictKey: null,
+                },
+              },
             },
           },
-          validator: 'document',
-          search: {
-            validator: 'documentSearch',
+        },
+        actions: {
+          preview: {
+            code: 101,
+            title: 'Preview',
+            actionModule: 'a-cms',
+            actionComponent: 'action',
+            icon: { f7: '::preview' },
+            enableOnStatic: null,
+            enableOnOpened: null,
+            stage: 'draft,formal',
           },
         },
-      },
-      statics: {
-        'a-app.app': {
-          items: staticApps,
-        },
-        'a-flow.flowDef': {
-          items: staticFlowDefs,
-        },
-        'a-base.resource': {
-          items: staticResources,
+        validator: 'document',
+        search: {
+          validator: 'documentSearch',
         },
       },
     },
-    validation: {
-      validators: {
-        document: {
-          schemas: 'document',
-        },
-        documentSearch: {
-          schemas: 'documentSearch',
-        },
+    statics: {
+      'a-app.app': {
+        items: staticApps,
       },
-      keywords: {},
-      schemas,
+      'a-flow.flowDef': {
+        items: staticFlowDefs,
+      },
+      'a-base.resource': {
+        items: staticResources,
+      },
     },
-  };
-  return meta;
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
 };
+module.exports = meta;

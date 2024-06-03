@@ -1,37 +1,40 @@
 import loadMore from './components/loadMore.jsx';
-import view from './components/view2.vue';
-import page from './components/page.vue';
-import navbar from './components/navbar.vue';
-import link from './components/link.vue';
-import linkColor from './components/linkColor.vue';
-import button from './components/button.vue';
-import component from './components/component.vue';
-import input from './components/input.vue';
-import toggle from './components/toggle.vue';
-import radio from './components/radio.vue';
-import select from './components/select2.vue';
+import view from './components/view2.js';
+import page from './components/page.js';
+import navbar from './components/navbar.js';
+import link from './components/link.js';
+import linkColor from './components/linkColor.js';
+import button from './components/button.js';
+import component from './components/component.js';
+import input from './components/input.js';
+import toggle from './components/toggle.js';
+import radio from './components/radio.js';
+import checkbox from './components/checkbox.js';
+import select from './components/select2.jsx';
 import validate from './components/validate.jsx';
 import validateItem from './components/validateItem.jsx';
-import list from './components/list.vue';
-import listButton from './components/listButton.vue';
-import listItem from './components/listItem.vue';
-import listPanel from './components/listPanel.vue';
-import listChoose from './components/listChoose.vue';
-import listInput from './components/listInput.vue';
-import listComponent from './components/listComponent.vue';
-import fabButton from './components/fabButton.vue';
-import swipeoutActions from './components/swipeoutActions.vue';
-import swipeoutButton from './components/swipeoutButton.vue';
-import tabPageContent from './components/tabPageContent.vue';
+import list from './components/list.js';
+import listButton from './components/listButton.js';
+import listItem from './components/listItem.js';
+import listPanel from './components/listPanel.js';
+import listChoose from './components/listChoose.js';
+import listInput from './components/listInput.js';
+import listComponent from './components/listComponent.js';
+import fabButton from './components/fabButton.js';
+import swipeoutActions from './components/swipeoutActions.js';
+import swipeoutButton from './components/swipeoutButton.js';
+import tabPageContent from './components/tabPageContent.jsx';
 import searchPage from './components/searchPage.vue';
-import popover from './components/popover.vue';
-import contextMenu from './components/contextMenu.vue';
-import box from './components/box.vue';
-import treeview from './components/treeview/treeview.vue';
-import treeviewItem from './components/treeview/treeviewItem.vue';
+import popover from './components/popover.js';
+import contextMenu from './components/contextMenu.js';
+import actionsBar from './components/actionsBar.jsx';
+import box from './components/box.js';
+import treeview from './components/treeview/treeview.js';
+import treeviewItem from './components/treeview/treeviewItem.js';
 import stats from './components/stats.jsx';
 import statsColor from './components/statsColor.jsx';
 import treeviewData from './components/treeview/treeviewData.js';
+import dividerLine from './components/dividerLine.jsx';
 
 export default {
   ebLoadMore: loadMore,
@@ -45,6 +48,7 @@ export default {
   ebInput: input,
   ebToggle: toggle,
   ebRadio: radio,
+  ebCheckbox: checkbox,
   ebSelect: select,
   ebValidate: validate,
   ebList: list,
@@ -62,10 +66,12 @@ export default {
   ebSearchPage: searchPage,
   ebPopover: popover,
   ebContextMenu: contextMenu,
+  ebActionsBar: actionsBar,
   ebBox: box,
   ebTreeview: treeview,
   ebTreeviewItem: treeviewItem,
   ebStats: stats,
   ebStatsColor: statsColor,
   ebTreeviewData: treeviewData,
+  ebDividerLine: dividerLine,
 };

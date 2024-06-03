@@ -1,29 +1,25 @@
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  // static
-  const staticLayouts = require('./config/static/layouts.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  const meta = {
-    base: {
-      atoms: {},
-      statics: {
-        'a-baselayout.layout': {
-          items: staticLayouts,
-        },
-        'a-base.resource': {
-          items: staticResources,
-        },
+const schemas = require('./meta/validation/schemas.js');
+const staticLayouts = require('./meta/static/layouts.js');
+const staticResources = require('./meta/static/resources.js');
+const meta = {
+  base: {
+    atoms: {},
+    statics: {
+      'a-baselayout.layout': {
+        items: staticLayouts,
+      },
+      'a-base.resource': {
+        items: staticResources,
       },
     },
-    validation: {
-      validators: {},
-      keywords: {},
-      schemas,
-    },
-    index: {
-      indexes: {},
-    },
-  };
-  return meta;
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
+  index: {
+    indexes: {},
+  },
 };
+module.exports = meta;

@@ -20,11 +20,12 @@ const ebAtomActions = Vue.prototype.$meta.module.get('a-base').options.mixins.eb
 
 // container: {
 //   atomClass,
-//   options,
+//   options, // .atomIdMain .atomMain .flowTaskId
 //   params,
 //   scene, // default/search/select/selecting
 //   layout,
 //   resource,
+//   mode,  // edit/view : for detail
 // },
 
 export default {
@@ -49,7 +50,12 @@ export default {
     Item,
   ],
   data() {
-    return {};
+    return {
+      index: {
+        layoutManagerScene: 'list',
+        layoutManagerName: 'listLayoutManager',
+      },
+    };
   },
   created() {
     this.$nextTick(() => {
@@ -59,10 +65,14 @@ export default {
   methods: {
     async index_init() {
       await this.base_init();
+      const res = await this.base_loadAtomClass();
+      if (!res) return;
+      await this.base_loadAtomMain();
       await this.select_prepareSelectedAtoms();
       await this.layout_prepareConfigLayout();
       await this.bulk_actionsInit();
       await this.filter_prepareData();
+      await this.select_initCheckSelectedAtoms();
       this.base.ready = true;
     },
   },

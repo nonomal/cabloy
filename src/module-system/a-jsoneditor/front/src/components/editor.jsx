@@ -15,6 +15,7 @@ export default {
       type: Boolean,
       default: false,
     },
+    changeDelay: {},
   },
   data() {
     return {
@@ -27,6 +28,13 @@ export default {
       if (type && Array.isArray(type)) return type[0];
       return type || 'string';
     },
+    changeDelay2() {
+      if (this.readOnly) return false;
+      if (this.changeDelay === true) {
+        return this.$config.changeDelay;
+      }
+      return this.changeDelay;
+    },
   },
   watch: {
     value(newValue) {
@@ -36,7 +44,13 @@ export default {
       this.cmEditor.setValue(this.content);
     },
   },
-  created() {},
+  created() {
+    if (this.changeDelay2) {
+      this._raiseEventInputDelay = this.$meta.util.debounce(() => {
+        this._raiseEventInputDelay_inner();
+      }, this.changeDelay2);
+    }
+  },
   mounted() {
     this.mountCodeMirror();
   },
@@ -45,6 +59,7 @@ export default {
       this.cmEditor._handlers = {};
       this.cmEditor = null;
     }
+    this._raiseEventInputDelay = null;
   },
   methods: {
     async mountCodeMirror() {
@@ -105,6 +120,13 @@ export default {
       }
     },
     _raiseEventInput() {
+      if (this._raiseEventInputDelay) {
+        this._raiseEventInputDelay();
+      } else {
+        this._raiseEventInputDelay_inner();
+      }
+    },
+    _raiseEventInputDelay_inner() {
       try {
         // not raise event if json.parse error
         this.$emit('input', this.getValue());

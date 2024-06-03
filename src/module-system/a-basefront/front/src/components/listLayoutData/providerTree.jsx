@@ -49,6 +49,11 @@ export default {
       this.treeviewData = this.$meta.util.createComponentInstance(ebTreeviewData, componentOptions);
       // treeviewRoot
       this.treeviewRoot = this.providerConfig.treeviewRoot;
+      // maxLevelAutoOpened
+      const maxLevelAutoOpened = this.layoutManager.container.maxLevelAutoOpened;
+      if (maxLevelAutoOpened !== undefined) {
+        this.treeviewRoot.attrs.maxLevelAutoOpened = maxLevelAutoOpened;
+      }
       // adapter
       const treeviewAdapter = await this._createTreeviewAdapter();
       this.treeviewData.setAdapter(treeviewAdapter);
@@ -75,7 +80,7 @@ export default {
       return await this.$meta.util.performAction({ ctx: this, action, item });
     },
     onPageRefresh() {
-      this.treeviewData.load(this.treeviewRoot);
+      return this.treeviewData.load(this.treeviewRoot);
     },
     onPageInfinite() {
       // do nothing
@@ -164,7 +169,8 @@ export default {
         this._reloadNode(node.parent);
       } else {
         // change current
-        node.data = itemNew;
+        const nodeNew = { data: itemNew };
+        this.treeviewData.replaceNode(node, nodeNew);
       }
     },
     renderLoadMore() {

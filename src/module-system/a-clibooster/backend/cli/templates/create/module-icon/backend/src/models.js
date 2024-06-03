@@ -1,4 +1,2 @@
-module.exports = app => {
-  const models = {};
-  return models;
-};
+const models = {};
+module.exports = models;

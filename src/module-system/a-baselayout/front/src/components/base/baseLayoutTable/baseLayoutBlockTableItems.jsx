@@ -1,11 +1,12 @@
-import Vue from 'vue';
-const ebViewSizeChange = Vue.prototype.$meta.module.get('a-components').options.mixins.ebViewSizeChange;
-const _heightTableHeader = 44;
+import Events from './baseLayoutBlockTableItems/events.js';
+import Scroll from './baseLayoutBlockTableItems/scroll.js';
+import renderTypes from './baseLayoutBlockTableItems/renderTypes.js';
+
 export default {
   meta: {
     global: false,
   },
-  mixins: [ebViewSizeChange],
+  mixins: [Events, Scroll],
   props: {
     layoutManager: {
       type: Object,
@@ -19,11 +20,7 @@ export default {
   },
   data() {
     return {
-      tableHeight: 0,
-      contextmenuRecord: null,
-      // viewSize
-      header: true,
-      // toolbar: true,
+      contextmenuRecordKey: null,
     };
   },
   computed: {
@@ -33,8 +30,11 @@ export default {
     selectedItemsKey() {
       return this.layoutManager.data.provider.selectedItemsKey || 'selectedItems';
     },
-    enableTableHeight() {
-      return this.blockConfig.enableTableHeight !== false;
+    activeItemKey() {
+      return this.layoutManager.data.provider.activeItemKey || 'activeAtomKey';
+    },
+    hoverItemKey() {
+      return this.layoutManager.data.provider.hoverItemKey || 'hoverAtomKey';
     },
     toolbar() {
       return this.layoutManager.bottombar.enable;
@@ -123,35 +123,6 @@ export default {
       if ($tableBody.scrollTop() === scrollTopNew) return cb();
       $tableBody.scrollTop(scrollTopNew, 300, cb);
     },
-    onPageCurrentChanged() {
-      // always true
-      this._scroll(true);
-    },
-    onViewSizeChange(size) {
-      this.tableHeight = size.height - _heightTableHeader;
-    },
-    onTableChange(pagination, filters, sorter) {
-      if (!this.enableOrder) return;
-      const { field, order = 'ascend' } = sorter;
-      const currentOrder = this._columnSorterCurrent(field);
-      if (currentOrder === order) return;
-      const _order = this._columnSorterFind(field);
-      this.layoutManager.order_onPerformChange(null, _order);
-    },
-    onSelectChange(selectedRowKeys) {
-      if (!this.enableSelection) return;
-      const items = this.layoutManager.base_getItems();
-      // eslint-disable-next-line
-      this.layoutManager.bulk[this.selectedItemsKey] = items.filter(item => {
-        return selectedRowKeys.findIndex(rowKey => rowKey === item[this.itemKey]) > -1;
-      });
-    },
-    onSwipeoutOpened(event, item) {
-      // callback
-      if (this.layoutManager.layout_onSwipeoutOpened) {
-        this.layoutManager.layout_onSwipeoutOpened(event, item);
-      }
-    },
     _checkColumnNameEqualOrder(order, columnName) {
       // callback
       if (this.layoutManager.layout_onColumnNameEqualOrder) {
@@ -172,37 +143,55 @@ export default {
       return false;
     },
     _customRender(text, record, index, column) {
+      // text
+      const dataKey = column.dataKey || column.dataIndex;
+      text = record[dataKey];
+      // pageInfo
+      const pageInfo = this.layoutManager.data.adapter.getPageInfo();
+      // index
+      let indexTotal;
+      if (!pageInfo || pageInfo.pageCurrent === 0) {
+        indexTotal = index;
+      } else {
+        indexTotal = (pageInfo.pageCurrent - 1) * pageInfo.pageSize + index;
+      }
       // options
-      let options = {
+      const options = {
         props: {
           layoutManager: this.layoutManager,
           layout: this.layout,
           layoutItems: this,
-          info: { text, record, index, column },
+          info: { text, record, index, indexTotal, column },
         },
       };
-      // default
-      if (!column.component) {
-        // computed
-        if (column.params && column.params.computed) {
-          options.props.expression = column.params.computed.expression;
-          return <eb-component module="a-basefront" name="renderTableCellComputed" options={options}></eb-component>;
-        }
-        // dateFormat
-        if (column.params && column.params.dateFormat && typeof column.params.dateFormat === 'object') {
-          options.props.dateFormat = column.params.dateFormat;
-          return <eb-component module="a-basefront" name="renderTableCellDatetime" options={options}></eb-component>;
-        }
-        // default
-        return <eb-component module="a-basefront" name="renderTableCellDefault" options={options}></eb-component>;
-      }
       // component
-      if (column.component.options) {
-        options = this.$meta.util.extend({}, column.component.options, options);
+      const component = {};
+      if (column.component) {
+        component.module = column.component.module;
+        component.name = column.component.name;
+      } else if (column.renderType) {
+        const renderType = renderTypes.find(item => item[0].toUpperCase() === column.renderType.toUpperCase());
+        if (!renderType) {
+          // not support
+          return <div>{`not supported renderType: ${column.renderType}`}</div>;
+        }
+        component.module = 'a-baserendertable';
+        component.name = renderType[1];
+      } else if (column.params?.computed) {
+        // computed
+        component.module = 'a-baserendertable';
+        component.name = 'renderTableCellComputed';
+      } else if (column.params?.dateFormat && typeof column.params?.dateFormat === 'object') {
+        // dateFormat
+        component.module = 'a-baserendertable';
+        component.name = 'renderTableCellDatetime';
+      } else {
+        // default
+        component.module = 'a-baserendertable';
+        component.name = 'renderTableCellDefault';
       }
-      return (
-        <eb-component module={column.component.module} name={column.component.name} options={options}></eb-component>
-      );
+      // render
+      return <eb-component module={component.module} name={component.name} options={options}></eb-component>;
     },
     _customCell(record, index, column, { expandIcon }) {
       if (!record._treeviewNode || !expandIcon) return {};
@@ -215,26 +204,32 @@ export default {
         },
       };
     },
+    _getRowClassName(record) {
+      const className = {};
+      // active
+      const activeItemKey = this.layoutManager.bulk[this.activeItemKey];
+      if (activeItemKey && activeItemKey === record[this.itemKey]) {
+        className.active = true;
+      }
+      return className;
+    },
     _customRow(record) {
+      const { item } = this.layoutManager.data_findItem(record[this.itemKey]);
       return {
+        className: this._getRowClassName(item, record),
         props: {},
         on: {
+          click: event => {
+            this.onRowClick(event, item, record);
+          },
+          mouseenter: event => {
+            this.onRowMouseEnter(event, item, record);
+          },
+          mouseleave: event => {
+            this.onRowMouseLeave(event, item, record);
+          },
           contextmenu: event => {
-            // popover
-            const popover = this.$$(this.$el).find('.popover');
-            if (popover.length === 0) return;
-
-            event.stopPropagation();
-            event.preventDefault();
-
-            const target = event.target;
-            // finished the event immediately
-            this.$nextTick(() => {
-              this.$f7.popover.open(popover, target);
-              // record
-              this.contextmenuRecord = record;
-              this.onSwipeoutOpened(null, record);
-            });
+            this.onRowContextMenu(event, item, record);
           },
         },
       };
@@ -303,7 +298,10 @@ export default {
         domToggle = (
           <div
             class={loading ? 'treeview-toggle treeview-toggle-hidden' : 'treeview-toggle'}
-            onClick={() => {
+            onClick={event => {
+              // stopPropagation
+              event.stopPropagation();
+              // switchNode
               const treeviewData = this.layout.treeviewData;
               treeviewData.switchNode(node.id);
             }}
@@ -335,16 +333,18 @@ export default {
         </div>
       );
     },
+    _getContextmenuRecord() {
+      if (!this.contextmenuRecordKey) return null;
+      const { item } = this.layoutManager.data_findItem(this.contextmenuRecordKey);
+      return item;
+    },
     _renderListItemContextMenu() {
       if (!this.layoutManager.item_renderContextMenu) return null;
-      const item = this.contextmenuRecord;
-      return this.layoutManager.item_renderContextMenu(item, 'menu');
+      const item = this._getContextmenuRecord();
+      return this.layoutManager.item_renderContextMenu(item, 'toolbar');
     },
     _renderTable() {
-      const scroll = {};
-      if (this.enableTableHeight) {
-        scroll.y = this.tableHeight;
-      }
+      const scroll = this._getTableScroll();
       const indentSize = this.blockConfig.indentSize || 29;
       return (
         <a-table

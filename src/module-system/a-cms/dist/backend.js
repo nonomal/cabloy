@@ -85,7 +85,6 @@ const path = __webpack_require__(1017);
 const require3 = __webpack_require__(5638);
 const ejs = require3('@zhennann/ejs');
 const pMap = require3('p-map');
-const extend = require3('extend2');
 const fse = require3('fs-extra');
 const moment = require3('moment');
 const eggBornUtils = require3('egg-born-utils');
@@ -126,7 +125,7 @@ module.exports = app => {
       }
 
       // site
-      const site = extend(true, {}, configSite);
+      const site = this.ctx.bean.util.extend({}, configSite);
 
       // plugins
       site.plugins = {};
@@ -222,7 +221,7 @@ module.exports = app => {
       const configSite = await this.getConfigSite();
       if (configSite) {
         if (mergeConfigSite) {
-          site = extend(true, site, configSite);
+          site = this.ctx.bean.util.extend(site, configSite);
         } else {
           if (configSite.language) site.language = configSite.language;
           if (configSite.themes) site.themes = configSite.themes;
@@ -244,7 +243,7 @@ module.exports = app => {
       // language(db)
       const configLanguage = await this.getConfigLanguage({ language });
       // combine
-      return extend(true, {}, siteBase, theme, configSite, configLanguage, {
+      return this.ctx.bean.util.extend({}, siteBase, theme, configSite, configLanguage, {
         language: language ? { current: language } : false,
       });
     }
@@ -260,7 +259,11 @@ module.exports = app => {
       if (!module) this.ctx.throw.module(moduleInfo.relativeName, 1003, themeModuleName);
       const moduleExtend = this.ctx.bean.util.getProperty(module, 'package.eggBornModule.cms.extend');
       if (!moduleExtend) return this.ctx.config.module(themeModuleName).theme;
-      return extend(true, {}, this._combineThemes(moduleExtend), this.ctx.config.module(themeModuleName).theme);
+      return this.ctx.bean.util.extend(
+        {},
+        this._combineThemes(moduleExtend),
+        this.ctx.config.module(themeModuleName).theme
+      );
     }
 
     // site<plugin<theme<site(db)<language(db)
@@ -289,8 +292,7 @@ module.exports = app => {
       // front
       site.front = {};
       // front.env
-      site.front.env = extend(
-        true,
+      site.front.env = this.ctx.bean.util.extend(
         {
           base: site.base,
           language: site.language,
@@ -803,17 +805,17 @@ module.exports = app => {
           const key = keys[index];
           value = value ? { [key]: value } : { [key]: data._envs[name] };
         }
-        extend(true, _env, value);
+        this.ctx.bean.util.extend(_env, value);
       }
       // combine
-      const env = extend(true, site.front.env, _env);
+      const env = this.ctx.bean.util.extend(site.front.env, _env);
       // front.envs
       if (site.front.envs) {
         env.envs = site.front.envs;
       }
       // article
       if (data.article) {
-        env.article = extend(true, {}, data.article);
+        env.article = this.ctx.bean.util.extend({}, data.article);
         // delete
         env.article.summary = undefined;
         env.article.content = undefined;
@@ -2578,10 +2580,7 @@ module.exports = app => {
 /***/ }),
 
 /***/ 2694:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const require3 = __webpack_require__(5638);
-const uuid = require3('uuid');
+/***/ ((module) => {
 
 module.exports = app => {
   const moduleInfo = app.meta.mockUtil.parseInfoFromPackage(__dirname);
@@ -2676,7 +2675,7 @@ module.exports = app => {
     }
 
     _uuid() {
-      return uuid.v4().replace(/-/g, '');
+      return this.ctx.bean.util.uuidv4();
     }
   }
   return Version;
@@ -3024,7 +3023,6 @@ module.exports = app => {
 
 const require3 = __webpack_require__(5638);
 const trimHtml = require3('@zhennann/trim-html');
-const uuid = require3('uuid');
 
 module.exports = app => {
   const moduleInfo = app.meta.mockUtil.parseInfoFromPackage(__dirname);
@@ -3042,18 +3040,31 @@ module.exports = app => {
     }
 
     async create({ atomClass, item, options, user }) {
+      const atomStage = item.atomStage;
       // super
       const key = await super.create({ atomClass, item, options, user });
       // article
-      const site = await this.ctx.bean.cms.render.combineSiteBase({ atomClass, mergeConfigSite: true });
-      const editMode = this.ctx.bean.util.getProperty(site, 'edit.mode') || 0;
+      let editMode;
+      let slug;
+      if (atomStage === 0) {
+        // draft init
+        const site = await this.ctx.bean.cms.render.combineSiteBase({ atomClass, mergeConfigSite: true });
+        editMode = this.ctx.bean.util.getProperty(site, 'edit.mode') || 0;
+        slug = null;
+      } else {
+        // copy init
+        const srcItem = options.createOptions.srcItem;
+        editMode = srcItem.editMode;
+        slug = srcItem.slug;
+      }
       // add article
       const params = {
         atomId: key.atomId,
         editMode,
+        slug,
       };
       // uuid
-      params.uuid = item.uuid || uuid.v4().replace(/-/g, '');
+      params.uuid = item.uuid || this.ctx.bean.util.uuidv4();
       // insert
       await this.modelArticle.insert(params);
       // add content
@@ -3086,13 +3097,37 @@ module.exports = app => {
 
     async write({ atomClass, target, key, item, options, user }) {
       const atomStage = item.atomStage;
+      // super
+      if (!target) {
+        await super.write({ atomClass, target, key, item, options, user });
+      }
+      // write cms
+      await this._write_cms({ atomStage, target, key, item, options, user });
+      // super
+      if (target) {
+        await super.write({ atomClass, target, key, item, options, user });
+      }
+      // render
+      const ignoreRender = options && options.ignoreRender;
+      const renderSync = options && options.renderSync;
+      if (!ignoreRender) {
+        if (atomStage === 0 || atomStage === 1) {
+          const inner = atomStage === 0;
+          if (renderSync) {
+            await this.ctx.bean.cms.render._renderArticlePushAsync({ atomClass, key, inner });
+          } else {
+            await this.ctx.bean.cms.render._renderArticlePush({ atomClass, key, inner });
+          }
+        }
+      }
+    }
+
+    async _write_cms({ atomStage, target, key, item, options, user }) {
       // get atom for safety
       const atomOld = await this.ctx.bean.atom.read({ key, user });
-      // super
-      await super.write({ atomClass, target, key, item, options, user });
       // if undefined then old
       const fields = [
-        'atomLanguage',
+        // 'atomLanguage',
         'slug',
         'editMode',
         'content',
@@ -3188,20 +3223,6 @@ module.exports = app => {
         this.ctx.instance.id,
         key.atomId,
       ]);
-
-      // render
-      const ignoreRender = options && options.ignoreRender;
-      const renderSync = options && options.renderSync;
-      if (!ignoreRender) {
-        if (atomStage === 0 || atomStage === 1) {
-          const inner = atomStage === 0;
-          if (renderSync) {
-            await this.ctx.bean.cms.render._renderArticlePushAsync({ atomClass, key, inner });
-          } else {
-            await this.ctx.bean.cms.render._renderArticlePush({ atomClass, key, inner });
-          }
-        }
-      }
     }
 
     async _renderContent({ item, atomId }) {
@@ -3291,6 +3312,10 @@ module.exports = app => {
       if (item.sorting && showSorting) meta.flags.push(item.sorting);
       // meta.summary
       meta.summary = item.description || item.summary;
+      // atomNameSub
+      if (item.atomNameSub) {
+        item.atomNameFull = `${item.atomName}: ${item.atomNameSub}`;
+      }
     }
   }
   return AtomCmsBase;
@@ -3734,6 +3759,7 @@ module.exports = {
   'Build Site First': '请先构建站点',
   'Cannot delete if has children': '有子元素时不允许删除',
   'Cannot delete if has articles': '有文章时不允许删除',
+  'CMS Article Publish': 'CMS文章发布',
 };
 
 
@@ -3799,8 +3825,8 @@ module.exports = app => {
   const _app = {
     atomName: 'CMS',
     atomStaticKey: 'appCms',
-    atomRevision: 3,
-    atomCategoryId: 'General',
+    atomRevision: 5,
+    atomCategoryId: 'AppCategoryCMS',
     description: '',
     appIcon: ':outline:article-outline',
     appIsolate: false,
@@ -3852,7 +3878,11 @@ module.exports = app => {
               module: moduleInfo.relativeName,
               atomClassName: 'article',
             },
+            atomStage: 0, // draft
             conditionExpression: null,
+            task: {
+              atomState: 0, // state: drafting
+            },
           },
         },
         {
@@ -3860,6 +3890,7 @@ module.exports = app => {
           name: 'Review',
           type: 'activityUserTask',
           options: {
+            atomState: 1,
             assignees: {
               roles: 'superuser',
             },
@@ -3874,6 +3905,9 @@ module.exports = app => {
           id: 'endEvent_1',
           name: 'End',
           type: 'endEventAtom',
+          options: {
+            atomState: 2,
+          },
         },
       ],
       edges: [
@@ -3893,7 +3927,7 @@ module.exports = app => {
   const definition = {
     atomName: 'CMS Article Publish',
     atomStaticKey: 'flowArticlePublish',
-    atomRevision: 100,
+    atomRevision: 102,
     description: '',
     content: JSON.stringify(content),
   };
@@ -4064,7 +4098,7 @@ module.exports = app => {
                 },
               },
               {
-                dataIndex: 'createdAt',
+                dataIndex: 'atomCreatedAt',
                 title: 'Created Time',
                 align: 'center',
                 params: {
@@ -4074,7 +4108,7 @@ module.exports = app => {
                 },
               },
               {
-                dataIndex: 'updatedAt',
+                dataIndex: 'atomUpdatedAt',
                 title: 'Modification Time',
                 align: 'center',
                 params: {
@@ -4092,7 +4126,7 @@ module.exports = app => {
   const layout = {
     atomName: 'CMS',
     atomStaticKey: 'layoutAtomListCms',
-    atomRevision: 0,
+    atomRevision: 1,
     description: '',
     layoutTypeCode: 3,
     content: JSON.stringify(content),
@@ -4247,9 +4281,8 @@ module.exports = app => {
       },
       imageCover: {
         type: 'string',
-        ebType: 'file',
+        ebType: 'image',
         ebTitle: 'ArticleCover',
-        ebParams: { mode: 1 },
       },
       // Extra
       __groupExtra: {
@@ -4857,6 +4890,13 @@ module.exports = app => {
             category: true,
             tag: true,
             cms: true,
+            dict: {
+              states: {
+                draft: {
+                  dictKey: 'a-dictbooster:dictAtomStateDraft',
+                },
+              },
+            },
           },
           actions: {
             preview: {

@@ -79,7 +79,6 @@ module.exports = app => {
       await super.write({ atomClass, target, key, item, options, user });
       // update userOnline
       const data = await this.ctx.model.userOnline.prepareData(item);
-      data.id = key.itemId;
       await this.ctx.model.userOnline.update(data);
     }
 
@@ -180,7 +179,6 @@ module.exports = app => {
       await super.write({ atomClass, target, key, item, options, user });
       // update userOnlineHistory
       const data = await this.ctx.model.userOnlineHistory.prepareData(item);
-      data.id = key.itemId;
       await this.ctx.model.userOnlineHistory.update(data);
     }
 
@@ -250,8 +248,10 @@ module.exports = ctx => {
       const res = await this._insertUserOnline({ user, data, isLogin });
       if (res) {
         // userOnlineHistory
-        await this._insertUserOnlineHistory({ user, data, isLogin });
+        const res2 = await this._insertUserOnlineHistory({ user, data, isLogin });
+        Object.assign(res, res2);
       }
+      return res;
     }
 
     async heartBeat({ user }) {
@@ -339,7 +339,7 @@ module.exports = ctx => {
         };
       } else {
         // check expireTime
-        if (item.expireTime > Date.now()) return false;
+        if (item.expireTime > Date.now()) return null;
         data = {
           onlineCount: item.onlineCount + 1,
           ...data,
@@ -350,7 +350,10 @@ module.exports = ctx => {
         id: item.id,
         ...data,
       });
-      return true;
+      // ok
+      return {
+        userOnlineId: item.id,
+      };
     }
 
     async _insertUserOnlineHistory({ user, data, isLogin }) {
@@ -379,6 +382,10 @@ module.exports = ctx => {
         },
         user,
       });
+      // ok
+      return {
+        userOnlineHistoryId: atomKey.itemId,
+      };
     }
   }
   return UserOnline;
@@ -955,6 +962,8 @@ module.exports = app => {
             simple: true,
             history: false,
             inner: true,
+            comment: false,
+            attachment: false,
             layout: {
               config: {
                 atomList: 'layoutAtomListUserOnline',
@@ -967,7 +976,7 @@ module.exports = app => {
               title: 'ActionKickOut',
               actionModule: moduleInfo.relativeName,
               actionComponent: 'action',
-              icon: { f7: ':outline:log-out-outline' },
+              icon: { f7: ':outline:logout-outline' },
               // enableOnOpened: true,
               stage: 'formal',
             },
@@ -988,6 +997,8 @@ module.exports = app => {
             simple: true,
             history: false,
             inner: true,
+            comment: false,
+            attachment: false,
           },
           actions: {},
           validator: 'userOnlineHistory',

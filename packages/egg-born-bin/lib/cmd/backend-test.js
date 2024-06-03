@@ -5,7 +5,6 @@ const eggBornUtils = require('egg-born-utils');
 const mock = require('egg-mock');
 const TestCommand = require('@zhennann/egg-bin').TestCommand;
 const utils = require('../utils.js');
-const eventAppReady = 'eb:event:appReady';
 
 class BackendTestCommand extends TestCommand {
   constructor(rawArgv) {
@@ -44,7 +43,7 @@ class BackendTestCommand extends TestCommand {
       yield app.ready();
 
       // check app ready
-      yield this.checkAppReady(app);
+      yield app.meta.checkAppReady();
 
       // done
       console.log(chalk.cyan('  backend-test successfully!'));
@@ -148,14 +147,6 @@ class BackendTestCommand extends TestCommand {
     testArgv.dryRun = undefined;
 
     return this.helper.unparseArgv(testArgv);
-  }
-
-  checkAppReady(app) {
-    return new Promise((resolve, reject) => {
-      app.on(eventAppReady, () => {
-        resolve();
-      });
-    });
   }
 
   description() {

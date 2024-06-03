@@ -8,8 +8,14 @@ export default {
         //
         item: null,
         atomClass: null,
+        atomClassBase: null,
         module: null,
-        validateParams: null,
+        validateSchema: null,
+        //
+        _atomIdMain: null,
+        _atomMain: null,
+        //
+        _formActionBase: null,
       },
     };
   },
@@ -20,59 +26,46 @@ export default {
     base_userLabels() {
       return this.$store.getters['a/base/userLabels'];
     },
+    base_atomIdMain() {
+      return this.base._atomIdMain;
+    },
+    base_atomMain() {
+      return this.container.options?.atomMain || this.base._atomMain;
+    },
+    base_flowTaskId() {
+      return this.container.options?.flowTaskId;
+    },
+    base_formAction() {
+      return this.container.options?.formAction;
+    },
+    base_formActionMain() {
+      return this.container.options?.formActionMain;
+    },
   },
   created() {
     this.$store.dispatch('a/base/getLabels');
-  },
-  mounted() {
-    this.$meta.eventHub.$on('atom:star', this.base_onStarChanged);
-    this.$meta.eventHub.$on('atom:labels', this.base_onLabelsChanged);
-    this.$meta.eventHub.$on('atom:action', this.base_onActionChanged);
-    this.$meta.eventHub.$on('atom:actions', this.base_onActionsChanged);
-    this.$meta.eventHub.$on('comment:action', this.base_onCommentChanged);
-    this.$meta.eventHub.$on('attachment:action', this.base_onAttachmentChanged);
-  },
-  beforeDestroy() {
-    this.$meta.eventHub.$off('atom:star', this.base_onStarChanged);
-    this.$meta.eventHub.$off('atom:labels', this.base_onLabelsChanged);
-    this.$meta.eventHub.$off('atom:action', this.base_onActionChanged);
-    this.$meta.eventHub.$off('atom:actions', this.base_onActionsChanged);
-    this.$meta.eventHub.$off('comment:action', this.base_onCommentChanged);
-    this.$meta.eventHub.$off('attachment:action', this.base_onAttachmentChanged);
   },
   methods: {
     async base_onInit() {
       // load atomClasses
       await this.$store.dispatch('a/base/getAtomClasses');
     },
-    async base_loadItem() {
+    async base_loadAtomClass() {
       try {
-        // item
-        const options = this.base_prepareReadOptions();
-        this.base.item = await this.$api.post('/a/base/atom/read', {
-          key: { atomId: this.container.atomId },
-          options,
-        });
-        // atomClass
-        this.base.atomClass = {
-          id: this.base.item.atomClassId,
-          module: this.base.item.module,
-          atomClassName: this.base.item.atomClassName,
-        };
+        // check container first
+        if (this.container.atomClass) {
+          this.base.atomClass = this.container.atomClass;
+        } else {
+          this.base.atomClass = await this.$api.post('/a/base/atom/atomClass', {
+            key: { atomId: this.container.atomId },
+          });
+        }
+        const useStoreAtomClasses = await this.$store.use('a/basestore/atomClasses');
+        this.base.atomClassBase = await useStoreAtomClasses.getAtomClassBase({ atomClass: this.base.atomClass });
         // module
-        this.base.module = await this.$meta.module.use(this.base.item.module);
-        // validateParams
-        const res = await this.$api.post('/a/base/atom/validator', {
-          atomClass: { id: this.base.item.atomClassId },
-        });
-        this.base.validateParams = {
-          module: res.module,
-          validator: res.validator,
-        };
-        // actions
-        await this.actions_fetchActions();
-        // found
-        this.base.notfound = false;
+        this.base.module = await this.$meta.module.use(this.base.atomClass.module);
+        // not set: found
+        // this.base.notfound = false;
         // ok
         return true;
       } catch (err) {
@@ -80,104 +73,121 @@ export default {
         return false;
       }
     },
+    async base_loadItem() {
+      try {
+        // options
+        let options = this.base_prepareReadOptions();
+        // check create delay
+        if (this.container.params?.createDelay) {
+          // createDelayGetItem
+          let createParams = this.container.params?.createDelay.dataOptions.createParams;
+          options = { ...options, ...createParams.options };
+          if (!this.base.validateSchema) {
+            options.returnSchema = true;
+          }
+          createParams = { ...createParams, options };
+          const res = await this.$api.post('/a/base/atom/default', createParams);
+          if (options.returnSchema) {
+            this.base.item = res.item;
+            this.base.validateSchema = res.schema;
+          } else {
+            this.base.item = res;
+          }
+          // actions
+          await this.actions_createDelayActions();
+        } else {
+          // item
+          if (!this.base.validateSchema) {
+            options = { ...options, returnSchema: true };
+          }
+          const res = await this.$api.post('/a/base/atom/read', {
+            key: { atomId: this.container.atomId },
+            atomClass: this.base.atomClass,
+            options,
+          });
+          if (options.returnSchema) {
+            this.base.item = res.item;
+            this.base.validateSchema = res.schema;
+          } else {
+            this.base.item = res;
+          }
+          // actions
+          await this.actions_fetchActions();
+          // timeline, not use await
+          this.timeline_loadData();
+        }
+        // found
+        this.base.notfound = false;
+        // ok
+        return true;
+      } catch (err) {
+        console.error(err);
+        this.base.item = null;
+        this.base.notfound = true;
+        return false;
+      }
+    },
+    async base_loadFormAction() {
+      if (!this.base.atomClassBase) return;
+      if (!this.base_formAction) return;
+      const useStoreAtomActions = await this.$store.use('a/basestore/atomActions');
+      this.base._formActionBase = await useStoreAtomActions.getActionBase({
+        atomClass: this.base.atomClass,
+        name: this.base_formAction,
+      });
+    },
+    async base_loadAtomMain() {
+      if (!this.base.atomClassBase) return;
+      if (!this.base.atomClassBase.detail) return;
+      if (this.container.options?.atomMain) {
+        this.base._atomIdMain = this.container.options?.atomMain.atomId;
+        return;
+      }
+      const atomIdMainFieldName = this.base.atomClassBase.fields?.mappings?.atomIdMain;
+      const atomIdMain = this.base.item[atomIdMainFieldName];
+      this.base._atomIdMain = atomIdMain;
+      const options = {};
+      if (this.base_flowTaskId) {
+        options.flowTaskId = this.base_flowTaskId;
+      }
+      if (this.base_formActionMain) {
+        options.formAction = this.base_formActionMain;
+      }
+      this.base._atomMain = await this.$api.post('/a/base/atom/read', {
+        key: { atomId: atomIdMain },
+        atomClass: this.base.atomClassBase.detail.atomClassMain,
+        options,
+      });
+    },
     base_prepareReadOptions() {
       // options
       const options = {};
       // layout
       options.layout = this.layout.current;
+      // for detail
+      options.containerMode = this.container.mode;
+      // flowTaskId
+      options.flowTaskId = this.base_flowTaskId;
+      // formAction/formActionMain
+      options.formAction = this.base_formAction;
+      options.formActionMain = this.base_formActionMain;
+      // need not atomIdMain
+      // // atomIdMain
+      // options.atomIdMain = this.base_atomIdMain;
       // options
       return options;
     },
     base_getCurrentStage() {
       if (!this.base.item) return null;
-      const stage = this.base.item.atomStage;
-      if (stage === undefined) return undefined;
-      return this.base_stageToString(stage);
+      return this.$meta.util.stageToString(this.base.item.atomStage);
     },
-    base_stageToString(stage) {
-      return stage === 0 ? 'draft' : stage === 1 ? 'formal' : 'history';
-    },
-    async base_onActionChanged(data) {
-      const key = data.key;
-      const action = data.action;
+    // async base_onOpenDrafted(data) {
+    //   const key = data.key;
 
-      if (!this.base_ready) return;
-      if (this.base.item.atomId !== key.atomId) return;
+    //   if (!this.base_ready) return;
+    //   if (this.base.item.atomId !== key.atomId) return;
 
-      if (action.name === 'save' && this.container.mode === 'edit' && this.page_getDirty()) {
-        if (data.actionSource === this) {
-          // just update time
-          this.base.item.atomUpdatedAt = new Date();
-        } else {
-          // prompt
-          const title = this.base.item.atomNameLocale || this.base.item.atomName;
-          try {
-            await this.$view.dialog.confirm(this.$text('DataChangedReloadConfirm'), title);
-            if (this.page_getDirty()) {
-              // only load once when more updates
-              await this.base_loadItem();
-              this.page_setDirty(false);
-            }
-          } catch (err) {
-            // just update time
-            this.base.item.atomUpdatedAt = new Date();
-          }
-        }
-        return;
-      }
-
-      // create
-      if (action.name === 'create') {
-        // do nothing
-        return;
-      }
-      // not check delete for draft
-      //    for: delete on atom list but not delete on atom when atomClosed=1
-      // delete
-      if (action.name === 'delete') {
-        if (this.base.item.atomStage !== 0 || this.base.item.atomIdFormal === 0) {
-          this.base.item = null;
-          this.base.notfound = true;
-          this.base.ready = false;
-          return;
-        }
-      }
-      // others
-      await this.base_loadItem();
-    },
-    async base_onActionsChanged(data) {
-      const key = data.key;
-
-      if (!this.base_ready) return;
-      if (this.base.item.atomId !== key.atomId) return;
-
-      await this.actions_fetchActions();
-    },
-    async base_onOpenDrafted(data) {
-      const key = data.key;
-
-      if (!this.base_ready) return;
-      if (this.base.item.atomId !== key.atomId) return;
-
-      await this.actions_fetchActions();
-    },
-    base_onCommentChanged(data) {
-      if (!this.base.item || data.atomId !== this.container.atomId) return;
-      if (data.action === 'create') this.base.item.commentCount += 1;
-      if (data.action === 'delete') this.base.item.commentCount -= 1;
-    },
-    base_onAttachmentChanged(data) {
-      if (!this.base.item || data.atomId !== this.container.atomId) return;
-      if (data.action === 'create') this.base.item.attachmentCount += 1;
-      if (data.action === 'delete') this.base.item.attachmentCount -= 1;
-    },
-    base_onStarChanged(data) {
-      if (!this.base.item || data.key.atomId !== this.container.atomId) return;
-      this.base.item.star = data.star;
-    },
-    base_onLabelsChanged(data) {
-      if (!this.base.item || data.key.atomId !== this.container.atomId) return;
-      this.base.item.labels = JSON.stringify(data.labels);
-    },
+    //   await this.actions_fetchActions();
+    // },
   },
 };

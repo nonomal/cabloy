@@ -182,7 +182,8 @@ export default {
       // schemaOptions
       let schemaOptions;
       if (base.validator) {
-        schemaOptions = await this.$api.post('/a/validation/validation/schema', {
+        const useStoreSchemas = await this.$store.use('a/validation/schemas');
+        schemaOptions = await useStoreSchemas.getSchema({
           module: base.validator.module,
           validator: base.validator.validator,
           schema: null,
@@ -231,16 +232,26 @@ export default {
     },
     __getHost() {
       const host = {
+        container: this,
         flowDefId: this.flowDefId,
-        diagram: this.diagram,
       };
+      if (this.type === 'node') {
+        host.node = {
+          id: this.data.id,
+          name: this.data.name,
+          type: this.data.type,
+        };
+      } else {
+        host.edge = {
+          id: this.data.id,
+          name: this.data.name,
+          source: this.data.source,
+          target: this.data.target,
+        };
+      }
       return host;
     },
-    renderList() {
-      if (!this.ready) return;
-      const host = {
-        container: this,
-      };
+    __getMeta() {
       const meta = {
         schema: this.schema,
         properties: {
@@ -274,6 +285,12 @@ export default {
           },
         };
       }
+      return meta;
+    },
+    renderList() {
+      if (!this.ready) return;
+      const host = this.__getHost();
+      const meta = this.__getMeta();
       return (
         <eb-validate
           ref="validate"

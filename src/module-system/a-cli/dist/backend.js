@@ -13,10 +13,7 @@ module.exports = app => {
 /***/ }),
 
 /***/ 235:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const require3 = __webpack_require__(638);
-const extend = require3('extend2');
+/***/ ((module) => {
 
 let __commandsMap;
 let __commandsAll;
@@ -131,7 +128,7 @@ module.exports = ctx => {
             const command = group[key];
             const fullKey = `${moduleName}:${groupName}:${key}`;
             // command
-            const _command = extend(true, {}, command);
+            const _command = ctx.bean.util.extend({}, command);
             // bean
             const beanName = command.bean;
             let beanFullName;
@@ -274,11 +271,11 @@ module.exports = ctx => {
       if (!Array.isArray(welcomes)) welcomes = [welcomes];
       welcomes = welcomes.map(item => ctx.text(item));
       // helper doc
-      const configHelper = this.cabloyConfig.cli && this.cabloyConfig.cli.helper;
+      const configHelper = ctx.bean.util.getProperty(this.cabloyConfig.get(), 'cli.helper');
       if (configHelper !== false) {
         let url = `https://cabloy.com/${ctx.locale === 'zh-cn' ? 'zh-cn/' : ''}articles/cli-introduce.html`;
         url = this.helper.chalk.keyword('cyan')(url);
-        const text = `cli docs: ${url}`;
+        const text = `${ctx.text('CliDocs')}: ${url}`;
         welcomes.unshift(text);
       }
       return welcomes;
@@ -489,20 +486,64 @@ module.exports = ctx => {
       return new Promise((resolve, reject) => {
         const logPrefix = options.logPrefix;
         const proc = spawn(cmd, args, options);
+        let stdout = '';
+        // let stderr = '';
         proc.stdout.on('data', async data => {
+          stdout += data.toString();
           await this.console.log({ text: data.toString() }, { logPrefix });
         });
         proc.stderr.on('data', async data => {
+          // stderr += data.toString();
           await this.console.log({ text: data.toString() }, { logPrefix });
         });
         proc.once('exit', code => {
           if (code !== 0) {
             const err = new Error(`spawn ${cmd} ${args.join(' ')} fail, exit code: ${code}`);
-            err.code = code;
+            err.code = 10000 + code;
             return reject(err);
           }
-          resolve();
+          resolve(stdout);
         });
+      });
+    }
+    async gitCommit({ cwd, message }) {
+      // git status
+      const stdout = await this.spawnExe({
+        cmd: 'git',
+        args: ['status'],
+        options: {
+          cwd,
+        },
+      });
+      if (stdout.indexOf('nothing to commit, working tree clean') > -1 && stdout.indexOf('is ahead of') === -1) {
+        // do nothing
+        return;
+      }
+      if (stdout.indexOf('is ahead of') === -1) {
+        // git add .
+        await this.spawnExe({
+          cmd: 'git',
+          args: ['add', '.'],
+          options: {
+            cwd,
+          },
+        });
+        // git commit
+        await this.spawnExe({
+          cmd: 'git',
+          args: ['commit', '-m', message],
+          options: {
+            cwd,
+          },
+        });
+      }
+      // git push
+      await this.spawnExe({
+        cmd: 'git',
+        args: ['push'],
+        options: {
+          cwd,
+        },
       });
     }
   }
@@ -643,6 +684,7 @@ module.exports = ctx => {
     }
 
     async renderContent({ content }) {
+      if (!content) return content;
       const data = this.getEjsData();
       const options = this.getEjsOptions();
       return await ejs.render(content, data, options);
@@ -687,8 +729,13 @@ module.exports = ctx => {
         .sort((a, b) => this._parseSnippetFilePrefix(a) - this._parseSnippetFilePrefix(b));
       // for
       for (const file of files) {
-        const snippet = require3(path.join(snippetsDir, file));
-        const targetFile = path.join(targetDir, snippet.file);
+        const snippetTemplatePath = path.join(snippetsDir, file);
+        const snippet = require3(snippetTemplatePath);
+        if (!snippet.file) {
+          throw new Error(`should provider file path for: ${file}`);
+        }
+        const fileName = await this.renderContent({ content: snippet.file });
+        const targetFile = path.join(targetDir, fileName);
         await this.applySnippet({ targetFile, snippet });
       }
     }
@@ -696,8 +743,16 @@ module.exports = ctx => {
     async applySnippet({ targetFile, snippet }) {
       await this.console.log(`apply changes to ${targetFile}`);
       // source code
-      let sourceCode = fs.readFileSync(targetFile);
-      sourceCode = sourceCode.toString('utf8');
+      let sourceCode;
+      if (fs.existsSync(targetFile)) {
+        sourceCode = fs.readFileSync(targetFile);
+        sourceCode = sourceCode.toString('utf8');
+      } else {
+        if (!snippet.init) {
+          throw new Error(`should provider init content for: ${targetFile}`);
+        }
+        sourceCode = await this.renderContent({ content: snippet.init });
+      }
       // language
       const language = snippet.parseOptions && snippet.parseOptions.language;
       // transform
@@ -857,6 +912,7 @@ module.exports = {};
 /***/ ((module) => {
 
 module.exports = {
+  CliDocs: 'Cli Docs',
   CliDone: 'Done',
 };
 
@@ -868,6 +924,7 @@ module.exports = {
 
 module.exports = {
   Usage: '用法',
+  CliDocs: 'Cli文档',
   CliDone: '已完成',
 };
 

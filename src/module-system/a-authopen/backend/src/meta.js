@@ -1,4 +1,4 @@
-const authFn = require('./config/passport/auth.js');
+const auth = require('./meta/passport/auth.js');
 
 // actionPathListOpenAuthSelf
 const _options = {
@@ -9,95 +9,83 @@ const actionPathListOpenAuthSelf = `/a/basefront/atom/list?module=a-authopen&ato
   JSON.stringify(_options)
 )}`;
 
-module.exports = app => {
-  // schemas
-  const schemas = require('./config/validation/schemas.js')(app);
-  // static
-  const staticLayouts = require('./config/static/layouts.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  // meta
-  const meta = {
-    auth: authFn,
-    base: {
-      atoms: {
-        authOpen: {
-          info: {
-            bean: 'authOpen',
-            title: 'Open Auth',
-            tableName: 'aAuthOpen',
-            tableNameModes: {
-              default: 'aAuthOpenView',
-            },
-            simple: true,
-            history: false,
-            inner: true,
-            fields: {
-              custom: ['clientID,clientSecret,clientSecretHidden'],
-            },
-            layout: {
-              config: {
-                atomList: 'layoutAtomListAuthOpen',
-              },
+const schemas = require('./meta/validation/schemas.js');
+const staticLayouts = require('./meta/static/layouts.js');
+const staticResources = require('./meta/static/resources.js');
+// meta
+const meta = {
+  auth,
+  base: {
+    atoms: {
+      authOpen: {
+        info: {
+          bean: 'authOpen',
+          title: 'Open Auth',
+          tableName: 'aAuthOpen',
+          tableNameModes: {
+            default: 'aAuthOpenView',
+          },
+          simple: true,
+          history: false,
+          inner: true,
+          comment: false,
+          attachment: false,
+          layout: {
+            config: {
+              atomList: 'layoutAtomListAuthOpen',
             },
           },
-          actions: {
-            hideClientSecret: {
-              code: 101,
-              title: 'Hide Client Secret',
-              actionModule: 'a-authopen',
-              actionComponent: 'action',
-              icon: { f7: ':outline:visibility-off-outline' },
-            },
-            resetClientSecret: {
-              code: 102,
-              title: 'Reset Client Secret',
-              actionModule: 'a-authopen',
-              actionComponent: 'action',
-              icon: { f7: ':outline:key-reset-outline' },
-            },
+        },
+        actions: {
+          hideClientSecret: {
+            code: 101,
+            title: 'Hide Client Secret',
+            actionModule: 'a-authopen',
+            actionComponent: 'action',
+            icon: { f7: ':outline:visibility-off-outline' },
           },
-          validator: 'authOpen',
-          search: {
-            validator: 'authOpenSearch',
+          resetClientSecret: {
+            code: 102,
+            title: 'Reset Client Secret',
+            actionModule: 'a-authopen',
+            actionComponent: 'action',
+            icon: { f7: ':outline:key-reset-outline' },
           },
         },
-      },
-      statics: {
-        'a-baselayout.layout': {
-          items: staticLayouts,
-        },
-        'a-base.resource': {
-          items: staticResources,
+        validator: 'authOpen',
+        search: {
+          validator: 'authOpenSearch',
         },
       },
     },
-    validation: {
-      validators: {
-        authOpen: {
-          schemas: 'authOpen',
-        },
-        authOpenSearch: {
-          schemas: 'authOpenSearch',
-        },
+    statics: {
+      'a-baselayout.layout': {
+        items: staticLayouts,
       },
-      keywords: {},
-      schemas,
-    },
-    settings: {
-      user: {
-        actionPath: actionPathListOpenAuthSelf,
+      'a-base.resource': {
+        items: staticResources,
       },
     },
-    event: {
-      implementations: {
-        'a-base:accountMigration': 'accountMigration',
-      },
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
+  settings: {
+    user: {
+      actionPath: actionPathListOpenAuthSelf,
     },
-    index: {
-      indexes: {
-        aAuthOpen: 'createdAt,updatedAt,atomId,userId,scopeRoleId',
-      },
+  },
+  event: {
+    implementations: {
+      'a-base:accountMigration': 'accountMigration',
     },
-  };
-  return meta;
+  },
+  index: {
+    indexes: {
+      aAuthOpen: 'createdAt,updatedAt,atomId,userId,scopeRoleId',
+    },
+  },
 };
+module.exports = meta;

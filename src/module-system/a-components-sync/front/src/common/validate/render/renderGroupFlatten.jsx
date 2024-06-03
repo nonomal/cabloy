@@ -2,6 +2,8 @@ export default {
   methods: {
     renderGroupFlatten(context) {
       let { parcel, index } = context;
+      // group whole
+      const groupWhole = this._renderGroupCommon_patchGroupWhole(context);
       // children
       let children = [];
       while (true) {
@@ -14,14 +16,20 @@ export default {
           key: flattenItemNext.key,
           property: flattenItemNext.property,
           meta: this.meta,
+          groupWhole,
         });
         // render
         const item = this._renderItem(context2);
-        // combine
-        if (Array.isArray(item)) {
-          children = children.concat(item);
-        } else {
-          children.push(item);
+        if (item) {
+          // patch item classNameStyle
+          const items = Array.isArray(item) ? item : [item];
+          this._patchItemsClassNameStyle({ context: context2, items });
+          // combine
+          if (Array.isArray(item)) {
+            children = children.concat(item);
+          } else {
+            children.push(item);
+          }
         }
         // next
         index++;
@@ -29,7 +37,7 @@ export default {
       // set back index
       context.index = index;
       // group
-      return this._renderGroupCommon(context, children);
+      return this._renderGroupCommon(context, children, groupWhole);
     },
     _getFlattenItemNext(context, index) {
       const { parcel } = context;

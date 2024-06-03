@@ -24,7 +24,7 @@ export default {
       // close
       this.$meta.util.swipeoutClose(event.currentTarget);
       // remove from selectedAtomIds
-      const selectedAtomIds = this.layoutManager.container.params.selectedAtomIds;
+      const selectedAtomIds = this.layoutManager.container.params?.selectedAtomIds;
       if (selectedAtomIds) {
         const index = selectedAtomIds.findIndex(_item => _item === item.atomId);
         if (index !== -1) {
@@ -53,7 +53,7 @@ export default {
           </div>
           <div class="date">
             {this.layoutManager.item_renderStats(item)}
-            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt)}</span>
+            <span>{this.$meta.util.formatDateTimeRelative(item.atomUpdatedAt || item.updatedAt)}</span>
           </div>
         </div>
       );

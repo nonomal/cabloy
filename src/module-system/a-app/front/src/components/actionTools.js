@@ -10,14 +10,16 @@ export default {
   ],
   methods: {
     async onAction() {
-      if (this.action.name === 'openApp') {
+      const action = this.action;
+      const actionName = action.actionName || action.name;
+      if (actionName === 'openApp') {
         return await this._onActionopenApp();
       }
     },
     async _onActionopenApp() {
       // params
       const { ctx, action } = this.$props;
-      const { appKey, appLanguage, appIsolate, force, external, target } = action;
+      let { appKey, appLanguage, appIsolate, force, external, target } = action;
       // not external
       if (!external) {
         await ctx.$meta.vueLayout.app_openHome({
@@ -29,9 +31,12 @@ export default {
         return;
       }
       // external
+      if (window.event && (window.event.metaKey || window.event.ctrlKey || window.event.button === 1)) {
+        target = '_blank';
+      }
       const queries = { appKey };
       if (appLanguage) queries.appLanguage = appLanguage;
-      if (appIsolate) queries.appIsolate = appIsolate;
+      if (appIsolate) queries.appIsolate = !!appIsolate;
       const url = this.$meta.util.combineQueries('', queries);
       window.open(url, target);
     },

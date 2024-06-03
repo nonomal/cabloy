@@ -13,9 +13,22 @@ export default {
     };
   },
   methods: {
-    onClick(event) {
+    async onClick(event) {
       // link
       const $clickedLinkEl = this.getLinkEl && this.getLinkEl();
+      // dev info
+      if ($clickedLinkEl && $clickedLinkEl.length > 0 && this.$meta.config.env === 'development') {
+        const _debugger = $clickedLinkEl.attr('debugger');
+        if (_debugger === '' || _debugger === 'true') {
+          window.__debugger = true;
+        }
+      }
+      // onClick
+      await this._onClick_inner(event, $clickedLinkEl);
+      // dev info
+      window.__debugger = false;
+    },
+    async _onClick_inner(event, $clickedLinkEl) {
       const isLink = $clickedLinkEl && $clickedLinkEl.length > 0;
 
       // only preventDefault for link
@@ -41,7 +54,7 @@ export default {
       if (event && event.preventF7Router) return;
 
       // onPerform
-      this._onPerformInner(event);
+      await this._onPerformInner(event);
     },
     async _onPerformInner(event) {
       // linkClick
@@ -54,6 +67,11 @@ export default {
       // onPerform
       try {
         this._showPreloader();
+        // debugger
+        if (window.__debugger && this.$meta.config.env === 'development') {
+          debugger;
+        }
+        // onPerform
         const res = await this.onPerform(event, this.context);
         this._hidePreloader();
         this._handleResult(res);
@@ -61,11 +79,11 @@ export default {
         this._hidePreloader();
         if (err && (err.code === 422 || err.code === -422)) {
           const message = this.$text('Data Validation Error');
-          this.$view.toast.show({ text: message });
+          this.$viewAppMethods.toast.show({ text: message });
           return;
         }
         if (err && err.code !== 401 && err.message) {
-          this.$view.toast.show({ text: trimMessage(this, err.message) });
+          this.$viewAppMethods.toast.show({ text: trimMessage(this, err.message) });
         }
         if (err && err.message) {
           throw err;
@@ -74,9 +92,9 @@ export default {
     },
     _handleResult(res) {
       if (res === true) {
-        this.$view.toast.show({ text: this.$text('Operation Succeeded') });
+        this.$viewAppMethods.toast.show({ text: this.$text('Operation Succeeded') });
       } else if (typeof res === 'string') {
-        this.$view.toast.show({ text: res });
+        this.$viewAppMethods.toast.show({ text: res });
       }
     },
     _showPreloader() {

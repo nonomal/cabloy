@@ -22,24 +22,19 @@ export default {
   methods: {
     async init() {
       // subnavbar
-      if (this.layoutConfig.subnavbar && this.layoutConfig.subnavbar.policyDefault) {
-        this.layoutManager.subnavbar_policyDefault();
-      }
-      // provider switch
-      const containerScene = this.layoutManager.container && this.layoutManager.container.scene;
-      const providerOptions = this.layoutConfig.providerOptions || {
+      await this.layoutManager.subnavbar_policyInit();
+      // provider
+      await this.layoutManager.data_providerInit({
         providerName: 'continuous',
-        autoInit: containerScene !== 'search',
-      };
-      await this.layoutManager.data_providerSwitch(providerOptions);
+      });
       // instance
       await this.layoutManager.layout_setInstance(this);
     },
   },
   render() {
-    const blockName = this.layoutConfig.blockItems || 'items';
+    const blockName = this.layoutConfig.options?.blockItems || 'items';
     return (
-      <div>
+      <div class="eb-atom-list-layout eb-atom-list-layout-list">
         {this.layoutManager.layout_renderBlock({ blockName })}
         {this.layoutManager.data_renderLoadMore()}
       </div>

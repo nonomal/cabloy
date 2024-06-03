@@ -1,72 +1,62 @@
-module.exports = app => {
-  const schemas = require('./config/validation/schemas.js')(app);
-  const staticDashboards = require('./config/static/dashboards.js')(app);
-  const staticResources = require('./config/static/resources.js')(app);
-  const meta = {
-    base: {
-      atoms: {
-        dashboard: {
-          info: {
-            bean: 'dashboard',
-            title: 'Dashboard',
-            tableName: 'aDashboard',
-            tableNameModes: {
-              full: 'aDashboardViewFull',
-            },
-            inner: true,
-            resource: true,
+const schemas = require('./meta/validation/schemas.js');
+const staticDashboards = require('./meta/static/dashboards.js');
+const staticResources = require('./meta/static/resources.js');
+const meta = {
+  base: {
+    atoms: {
+      dashboard: {
+        info: {
+          bean: 'dashboard',
+          title: 'Dashboard',
+          tableName: 'aDashboard',
+          tableNameModes: {
+            full: 'aDashboardViewFull',
           },
-          actions: {
-            write: {
-              enableOnStatic: true,
-            },
-          },
-          validator: 'dashboard',
-          search: {
-            validator: 'dashboardSearch',
+          inner: true,
+          resource: true,
+          comment: false,
+          attachment: false,
+        },
+        actions: {
+          write: {
+            enableOnStatic: null,
           },
         },
-      },
-      resources: {
-        widget: {
-          title: 'Dashboard Widget',
-        },
-      },
-      statics: {
-        'a-dashboard.dashboard': {
-          items: staticDashboards,
-        },
-        'a-base.resource': {
-          items: staticResources,
+        validator: 'dashboard',
+        search: {
+          validator: 'dashboardSearch',
         },
       },
     },
-    sequence: {
-      providers: {
-        dashboard: {
-          bean: {
-            module: 'a-sequence',
-            name: 'simple',
-          },
-          start: 0,
-        },
+    resources: {
+      widget: {
+        title: 'Dashboard Widget',
       },
     },
-    validation: {
-      validators: {
-        dashboard: {
-          schemas: 'dashboard',
-        },
-        dashboardSearch: {
-          schemas: 'dashboardSearch',
-        },
+    statics: {
+      'a-dashboard.dashboard': {
+        items: staticDashboards,
       },
-      keywords: {},
-      schemas: {
-        dashboard: schemas.dashboard,
-        dashboardSearch: schemas.dashboardSearch,
+      'a-base.resource': {
+        items: staticResources,
       },
     },
-  };
-  return meta;
+  },
+  sequence: {
+    providers: {
+      dashboard: {
+        bean: {
+          module: 'a-sequence',
+          name: 'simple',
+        },
+        start: 0,
+      },
+    },
+  },
+  validation: {
+    validators: {},
+    keywords: {},
+    schemas,
+  },
 };
+module.exports = meta;

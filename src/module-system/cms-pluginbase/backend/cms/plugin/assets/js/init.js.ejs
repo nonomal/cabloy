@@ -1,5 +1,38 @@
+<%
+const configBodyCrypto=ctx.config.module('a-base').securityLevelProtection.body.crypto;
+const configBodyCryptoJS=ctx.config.module('a-base').securityLevelProtection.body.cryptojs;
+%>
 (function () {
   $(document).ready(function () {
+    const requirecss_path = 'api/static/a/base/vendor/require-css/css.min';
+    // config
+    const config = {
+      baseUrl: window.util.serverUrl(),
+      map: {
+        '*': {
+          css: requirecss_path,
+        },
+      },
+    };
+    window.requirejs.config(config);
+  });
+
+  $(document).ready(function () {
+    window.configBodyCrypto = <%=configBodyCrypto%>;
+    window.configBodyCryptoJS = '<%=`api/static${configBodyCryptoJS}.min`%>';
+    if(!window.configBodyCrypto){
+      _documentReady();
+      return;
+    }
+    window.requirejs([window.configBodyCryptoJS], Loader => {
+      Loader.createBodyCrypto().then(bodyCryptoInstance => {
+        window.bodyCryptoInstance = bodyCryptoInstance;
+        _documentReady();
+      });
+    });
+  });
+
+  function _documentReady(){
     // echo
     util.echo();
     // img delay
@@ -11,7 +44,7 @@
       $item.attr('src', util.combineImageUrl(src, width, height));
       $(item).removeClass('img-delay');
     });
-  });
+  }
 
   $(document).on('echo-ready', function () {
     if (util.user.op.anonymous) return;

@@ -1,4 +1,4 @@
-const extend = require('extend2');
+const extend = require('@zhennann/extend');
 
 const CTXCONFIG = Symbol.for('Context#__config');
 
@@ -56,8 +56,20 @@ module.exports = function (loader, modules) {
 
       // module config
       if (module.main.config) {
-        const config = module.main.config(loader.appInfo);
-        loader.app.meta.util.monkeyModule(loader.app.meta.modulesMonkey, 'configLoaded', { module, config });
+        let config = module.main.config(loader.appInfo);
+        // configNew is not used by now
+        const configNew = loader.app.meta.util.monkeyModule(
+          loader.app.meta.appMonkey,
+          loader.app.meta.modulesMonkey,
+          'configLoaded',
+          {
+            module,
+            config,
+          }
+        );
+        if (configNew) {
+          config = configNew;
+        }
         extend(true, ebConfig, config);
       }
 

@@ -1,8 +1,18 @@
 export default {
   validate: {
     hint: {
-      optional: '(?)',
-      must: '',
+      optional: '', // '(?)',
+      must: '*',
+    },
+    cascadeParams: {
+      default: {
+        ebParams_group: {
+          staticClass: 'col-100 medium-100 large-50',
+        },
+        ebParams_groupWhole: {
+          staticClass: 'col-100 medium-50 large-25',
+        },
+      },
     },
   },
   form: {

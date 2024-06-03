@@ -2,10 +2,22 @@
   "name": "cabloy-source",
   "title": "Cabloy",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "src/module/*",
+    "src/module-system/*",
+    "src/module-vendor/*",
+    "src/suite/*/modules/*",
+    "src/suite-vendor/*/modules/*"
+  ],
   "description": "A Node.js full-stack framework with workflow engine, based on koa + egg + vue + framework7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zhennann/cabloy.git"
+  },
+  "homepage": "https://github.com/zhennann/cabloy#readme",
+  "bugs": {
+    "url": "https://github.com/zhennann/cabloy/issues"
   },
   "author": "zhennann",
   "license": "MIT",
@@ -17,10 +29,9 @@
     "framework7",
     "cabloy"
   ],
-  "bugs": {
-    "url": "https://github.com/zhennann/cabloy/issues"
+  "engines": {
+    "node": ">=16.0.0"
   },
-  "homepage": "https://github.com/zhennann/cabloy#readme",
   "scripts": {
     "cli": "node ./packages/egg-born-bin/bin/egg-born-bin.js cli",
     "db:reset": "node ./packages/egg-born-bin/bin/egg-born-bin.js backend-db-reset",
@@ -33,11 +44,16 @@
     "start:backend": "node ./packages/egg-born-scripts/bin/egg-born-scripts.js backend-start",
     "start:backend-daemon": "node ./packages/egg-born-scripts/bin/egg-born-scripts.js backend-start --daemon",
     "stop:backend": "node ./packages/egg-born-scripts/bin/egg-born-scripts.js backend-stop",
+    "release": "node ./packages/egg-born-bin/bin/egg-born-bin.js release",
+    "release:front": "node ./packages/egg-born-bin/bin/egg-born-bin.js release-front",
+    "release:backend": "node ./packages/egg-born-bin/bin/egg-born-bin.js release-backend",
     "commits": "./scripts/commits.sh",
     "commits-all": "./scripts/commits-all.sh",
     "format": "prettier --write \"**/*.js\" \"**/*.json\" \"**/*.jsx\" \"**/*.vue\"",
     "lint": "prettier --check \"**/*.js\" \"**/*.json\" \"**/*.jsx\" \"**/*.vue\"",
-    "docs:build": "node_modules/.bin/jsdoc -c jsdoc.json --readme docs/jsdoc-readme.md"
+    "eslint": "eslint --ext .js,.json,.jsx,.vue src",
+    "docs:build": "node_modules/.bin/jsdoc -c jsdoc.json --readme docs/jsdoc-readme.md",
+    "cnpm:sync": "node ./scripts/cnpm-sync.js"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",
@@ -48,25 +64,24 @@
     "@babel/register": "^7.8.3",
     "@zhennann/docdash": "^1.2.3",
     "@zhennann/extend": "^3.0.2",
-    "@zhennann/framework7": "^6.0.4",
-    "@zhennann/socketio": "^3.0.2",
-    "@zhennann/vue": "^2.6.15",
+    "@zhennann/framework7": "^5.8.2",
+    "@zhennann/socketio": "^4.0.2",
     "async": "^3.2.0",
     "autoprefixer": "^9.7.4",
-    "axios": "^0.21.1",
-    "babel-eslint": "^10.1.0",
+    "axios": "^1.6.2",
+    "bagpipe": "^0.3.5",
     "bluebird": "^3.7.2",
     "chalk": "^3.0.0",
     "connect-history-api-fallback": "^1.6.0",
     "copy-webpack-plugin": "^7.0.0",
-    "egg-born-utils": "^1.0.12",
-    "eslint": "^7.21.0",
-    "eslint-config-egg": "^9.0.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-jsdoc": "^37.9.1",
+    "egg-born-utils": "^1.1.7",
+    "eslint": "^8.27.0",
+    "eslint-config-egg": "^13.1.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-jsdoc": "^46.9.1",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.4.0",
-    "eslint-plugin-vue": "^7.17.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-vue": "^9.7.0",
     "eventsource-polyfill": "^0.9.6",
     "express": "^4.15.4",
     "extend2": "^1.0.1",
@@ -75,18 +90,19 @@
     "http-proxy-middleware": "^1.0.6",
     "is-type-of": "^1.2.0",
     "js-cookie": "^2.2.1",
-    "jsdoc": "^3.6.10",
+    "jsdoc": "^4.0.2",
     "json5": "^2.1.1",
     "less": "^3.13.0",
     "mini-css-extract-plugin": "^1.3.3",
     "moment": "^2.24.0",
+    "npm-request": "^1.0.0",
     "open": "^7.0.2",
     "ora": "^4.0.3",
-    "prettier": "2.3.2",
     "p-map": "^3.0.0",
-    "regenerator-runtime": "^0.13.7",
+    "prettier": "2.3.2",
+    "regenerator-runtime": "^0.14.0",
     "rimraf": "^3.0.2",
     "semver": "^7.3.7",
-    "vue-eslint-parser": "^7.10.0"
+    "vue-eslint-parser": "^9.1.0"
   }
 }

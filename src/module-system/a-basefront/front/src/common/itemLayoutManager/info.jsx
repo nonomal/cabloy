@@ -47,38 +47,69 @@ export default {
           this.$meta.eventHub.$emit('atom:star', { key, star: data.star, starCount: data.starCount });
         });
     },
+    async info_onComments(event) {
+      if (this.container.params?.createDelay) {
+        await this.$refs.validate.perform(event, { action: 'save' });
+      }
+      const url = `/a/basefront/comment/list?atomId=${this.base.item.atomId}`;
+      this.$view.navigate(url);
+    },
+    async info_onAttachments(event) {
+      if (this.container.params?.createDelay) {
+        await this.$refs.validate.perform(event, { action: 'save' });
+      }
+      const url = `/a/basefront/attachment/list?atomId=${this.base.item.atomId}`;
+      this.$view.navigate(url);
+    },
     info_getLabel(id) {
       return this.base_userLabels[id];
     },
     info_getItemMetaMedia(avatar) {
-      const media = avatar || this.$meta.config.modules['a-base'].user.avatar.default;
-      return this.$meta.util.combineImageUrl(media, 16);
+      return this.$meta.util.combineAvatarUrl(avatar, 16);
+    },
+    info_checkEnableComment(item) {
+      // 0. atomStage 0 for workflow
+      if (item.atomStage === 0) return true;
+      // 1. config
+      const configComment = this.layout.configFull.info.comment;
+      if (configComment === true || configComment === false) return configComment;
+      // 2. meta
+      const atomClassBase = this.getAtomClass(this.base.atomClass);
+      return atomClassBase.comment !== false;
+    },
+    info_checkEnableAttachment(/* item*/) {
+      // 1. config
+      const configAttachment = this.layout.configFull.info.attachment;
+      if (configAttachment === true || configAttachment === false) return configAttachment;
+      // 2. meta
+      const atomClassBase = this.getAtomClass(this.base.atomClass);
+      return atomClassBase.attachment !== false;
     },
     info_renderActionsLeft() {
       if (!this.base_ready) return;
       const item = this.base.item;
       const children = [];
       // comment
-      if (item.atomStage === 0 || this.layout.configFull.info.comment) {
+      if (this.info_checkEnableComment(item)) {
         children.push(
           <eb-link
             key="actionsLeft:comment"
             iconF7="::comment-dots"
             iconBadge={item.commentCount}
             tooltip={this.$text('Comments')}
-            eb-href={`/a/basefront/comment/list?atomId=${item.atomId}`}
+            propsOnPerform={this.info_onComments}
           ></eb-link>
         );
       }
       // attachment
-      if (this.layout.configFull.info.attachment) {
+      if (this.info_checkEnableAttachment(item)) {
         children.push(
           <eb-link
             key="actionsLeft:attachment"
             iconF7="::attachment-line"
             iconBadge={item.attachmentCount}
             tooltip={this.$text('Attachments')}
-            eb-href={`/a/basefront/attachment/list?atomId=${item.atomId}`}
+            propsOnPerform={this.info_onAttachments}
           ></eb-link>
         );
       }
@@ -88,6 +119,7 @@ export default {
           <eb-link
             key="actionsLeft:star"
             iconF7={item.star ? '::star' : ':outline:star-outline'}
+            iconColor={item.star ? 'orange' : 'gray'}
             tooltip={this.$text('UserStar')}
             propsOnPerform={this.info_onStarSwitch}
           ></eb-link>
@@ -102,7 +134,7 @@ export default {
             children.push(
               <eb-link
                 key={label}
-                text={_label.text}
+                text={(_label.text || '')[0]}
                 style={{ color: _label.color }}
                 tooltip={this.$text('UserLabel')}
                 propsOnPerform={this.info_onLabel}
@@ -121,58 +153,19 @@ export default {
         }
       }
       // ok
-      return children;
-    },
-    info_renderAvatar() {
-      const item = this.base.item;
-      const children = [];
-      let small = false;
-      if (item.userIdCreated !== item.userIdUpdated) {
-        small = true;
-        children.push(
-          <img
-            key="avatar:one"
-            class={`avatar ${small ? 'avatar12' : 'avatar16'}`}
-            src={this.info_getItemMetaMedia(item.avatarUpdated)}
-            title={item.userName}
-          />
-        );
-      }
-      children.push(
-        <img
-          key="avatar:two"
-          class={`avatar ${small ? 'avatar12' : 'avatar16'}`}
-          src={this.info_getItemMetaMedia(item.avatar)}
-          title={item.userName}
-        />
-      );
       return (
-        <div key="avatar" class="info-avatar">
+        <div key="actionsLeft:group" class="atom-actions-left-group">
           {children}
         </div>
       );
     },
-    info_renderDate() {
-      const item = this.base.item;
-      const children = [];
-      const dateCreated = this.$meta.util.formatDateTime(item.atomCreatedAt);
-      const dateUpdated = this.$meta.util.formatDateTime(item.atomUpdatedAt);
-      let small = false;
-      if (dateCreated !== dateUpdated) {
-        small = true;
-        children.push(<div key="date:one">{dateUpdated}</div>);
-      }
-      if (small) {
-        children.push(<div key="date:two">{dateCreated}</div>);
-      } else {
-        children.push(<div key="date:one2">{this.$meta.util.formatDate(item.atomCreatedAt)}</div>);
-        children.push(<div key="date:two2">{this.$meta.util.formatTime(item.atomCreatedAt)}</div>);
-      }
-      return (
-        <div key="date" class="info-date">
-          {children}
-        </div>
-      );
+    info_renderAtomInfo() {
+      const options = {
+        props: {
+          item: this.base.item,
+        },
+      };
+      return <eb-component key="atomInfo" module="a-basefront" name="atomInfo" options={options}></eb-component>;
     },
     info_renderActionsRight() {
       if (!this.base_ready) return;
@@ -181,25 +174,83 @@ export default {
       // atom closed
       if (item.atomStage === 0 && item.atomClosed === 1) {
         children.push(
-          <f7-badge key="atomClosed" color="orange">
+          <f7-badge key="atomClosed" color="gray">
             {this.$text('Closed')}
           </f7-badge>
         );
       }
       // flow
-      if (item.atomStage === 0 && item.flowNodeNameCurrentLocale) {
-        children.push(
-          <f7-badge key="flowNodeNameCurrent" color="orange">
-            {item.flowNodeNameCurrentLocale}
-          </f7-badge>
-        );
+      const domFlowNodeState = this.item_renderFlowNodeState(item);
+      if (domFlowNodeState) {
+        children.push(domFlowNodeState);
       }
-      // avatar
-      children.push(this.info_renderAvatar());
-      // date
-      children.push(this.info_renderDate());
+      // info
+      const domInfo = this.info_renderAtomInfo();
+      if (domInfo) {
+        children.push(domInfo);
+      }
       // ok
       return children;
     },
   },
 };
+
+// info_renderAvatar() {
+//   if (this.base.atomClassBase.itemOnly) {
+//     // do nothing
+//     return null;
+//   }
+//   const item = this.base.item;
+//   const children = [];
+//   let small = false;
+//   if (item.userIdCreated !== item.userIdUpdated) {
+//     small = true;
+//     children.push(
+//       <img
+//         key="avatar:one"
+//         class={`avatar ${small ? 'avatar12' : 'avatar16'}`}
+//         src={this.info_getItemMetaMedia(item.avatarUpdated)}
+//         title={item.userName}
+//       />
+//     );
+//   }
+//   children.push(
+//     <img
+//       key="avatar:two"
+//       class={`avatar ${small ? 'avatar12' : 'avatar24'}`}
+//       src={this.info_getItemMetaMedia(item.avatar)}
+//       title={item.userName}
+//     />
+//   );
+//   return (
+//     <div key="avatar" class="info-avatar">
+//       {children}
+//     </div>
+//   );
+// },
+// info_renderDate() {
+//   if (this.base.atomClassBase.itemOnly) {
+//     // do nothing
+//     return null;
+//   }
+//   const item = this.base.item;
+//   const children = [];
+//   const dateCreated = this.$meta.util.formatDateTime(item.atomCreatedAt || item.createdAt);
+//   const dateUpdated = this.$meta.util.formatDateTime(item.atomUpdatedAt || item.updatedAt);
+//   let small = false;
+//   if (dateCreated !== dateUpdated) {
+//     small = true;
+//     children.push(<div key="date:one">{dateUpdated}</div>);
+//   }
+//   if (small) {
+//     children.push(<div key="date:two">{dateCreated}</div>);
+//   } else {
+//     children.push(<div key="date:one2">{this.$meta.util.formatDate(item.atomCreatedAt || item.createdAt)}</div>);
+//     children.push(<div key="date:two2">{this.$meta.util.formatTime(item.atomCreatedAt || item.createdAt)}</div>);
+//   }
+//   return (
+//     <div key="date" class="info-date">
+//       {children}
+//     </div>
+//   );
+// },

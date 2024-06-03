@@ -48,7 +48,13 @@ export default {
       if (this.onInit) {
         await this.onInit();
       }
+      await this.init_preloadModules();
       this.ready = true;
+    },
+    async init_preloadModules() {
+      const useStoreApp = await this.$store.use('a/app/app');
+      const appKey = this.layoutManager.container.appKey;
+      useStoreApp.preloadModules({ appKey });
     },
     init_layoutConfig() {
       // accordionItemOpened
@@ -58,7 +64,11 @@ export default {
       this.accordionItemOpened = this.layoutManager.layout.layoutConfig[this.layoutConfigKeyOpened] || 0;
     },
     async init_categoriesAll() {
-      this.categoryTree = await this.$store.dispatch('a/base/getCategoryTreeResource', { resourceType: 'a-base:menu' });
+      const appKey = this.layoutManager.container.appKey;
+      this.categoryTree = await this.$store.dispatch('a/base/getCategoryTreeResourceMenu', {
+        resourceType: 'a-base:menu',
+        appKey,
+      });
     },
     getGroups() {
       return this.groups;
@@ -72,11 +82,12 @@ export default {
       }
       return this.layoutManager.base_onPerformResource(event, item);
     },
-    onAccordionOpen(event, group) {
+    async onAccordionOpen(event, group) {
       if (this.expandAll) return;
       this.accordionItemOpened = group.id;
       // save
-      this.$store.commit('a/base/setLayoutConfigKey', {
+      const useStoreLayoutConfig = await this.$store.use('a/basestore/layoutConfig');
+      useStoreLayoutConfig.setLayoutConfigKey({
         module: 'a-basefront',
         key: this.layoutConfigKeyOpened,
         value: group.id,
@@ -130,10 +141,12 @@ export default {
         if (!item) {
           domItem = <f7-list-item divider></f7-list-item>;
         } else {
+          const devResourceKey = this.$meta.config.env === 'development' ? item.atomStaticKey : null;
           domItem = (
             <eb-list-item
-              class="item"
+              class="item item-after-chevron-none item-line-height-compact"
               key={item.atomId}
+              data-dev-resource-key={devResourceKey}
               link="#"
               title={item.atomNameLocale}
               propsOnPerform={event => this.onItemClick(event, item)}
@@ -193,9 +206,34 @@ export default {
         </eb-list>
       );
     },
+    _renderUnclassifiedTip() {
+      const appKey = this.layoutManager.container.appKey;
+      if (appKey !== 'a-appbooster:appUnclassified') return null;
+      return (
+        <ul>
+          <li>
+            {this.$text('AppUnclassifiedOptionsTip1_Desp')}
+            <f7-link external={true} target="_blank" href={this.$text('AppUnclassifiedOptionsTip1_LinkURL')}>
+              {this.$text('AppUnclassifiedOptionsTip1_LinkTitle')}
+            </f7-link>
+          </li>
+          <li>
+            {this.$text('AppUnclassifiedOptionsTip2_Desp')}
+            <f7-link external={true} target="_blank" href={this.$text('AppUnclassifiedOptionsTip2_LinkURL')}>
+              {this.$text('AppUnclassifiedOptionsTip2_LinkTitle')}
+            </f7-link>
+          </li>
+        </ul>
+      );
+    },
     renderItems() {
       if (!this.ready) return null;
-      return <div>{this._renderAccordions()}</div>;
+      return (
+        <div>
+          {this._renderAccordions()}
+          {this._renderUnclassifiedTip()}
+        </div>
+      );
     },
   },
   render() {

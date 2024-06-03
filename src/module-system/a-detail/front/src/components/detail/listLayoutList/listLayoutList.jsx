@@ -21,8 +21,8 @@ export default {
   },
   methods: {
     async init() {
-      // provider switch
-      await this.layoutManager.data_providerSwitch({
+      // provider
+      await this.layoutManager.data_providerInit({
         providerName: 'all',
         autoInit: true,
       });
@@ -32,7 +32,7 @@ export default {
   },
   render() {
     return (
-      <div>
+      <div class="detail-list-main-container">
         {this.layoutManager.layout_renderBlock({ blockName: 'title' })}
         {this.layoutManager.layout_renderBlock({ blockName: 'items' })}
       </div>
